@@ -13,17 +13,24 @@ import java.net.URL
 object PuzzleLevels {
 
     val colors = listOf(
-        Color(0xFFE8C1FF), Color(0xFFFFD4A3), Color(0xFFD3D3D3), Color(0xFF9DB4C0),
-        Color(0xFFB4E7B4), Color(0xFFA3E4DB), Color(0xFFFFB3E6), Color(0xFFC8C8C8),
-        Color(0xFFADD8E6), Color(0xFFFFB6A3)
+        Color(0x66FF5252), // Rouge clair
+        Color(0x66FF9800), // Orange vif
+        Color(0x66FFEB3B), // Jaune vif
+        Color(0x664CAF50), // Vert clair
+        Color(0x6600BCD4), // Cyan
+        Color(0x662196F3), // Bleu clair
+        Color(0x66673AB7), // Violet clair
+        Color(0x66E91E63), // Rose
+        Color(0x66795548), // Marron clair
+        Color(0x669E9E9E)  // Gris clair
     )
+
 
     private const val LEVELS_URL = "https://raw.githubusercontent.com/oussamaessid/Queen/main/levels.json"
     private const val CACHE_FILE_NAME = "cached_levels.json"
 
     suspend fun loadLevelsFromRemote(context: Context): List<PuzzleLevel> = withContext(Dispatchers.IO) {
         try {
-            // 1. Essayer de charger depuis Internet
             val url = URL(LEVELS_URL)
             val connection = url.openConnection() as HttpURLConnection
             connection.setRequestProperty("User-Agent", "Mozilla/5.0")

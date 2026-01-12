@@ -19,16 +19,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mindmaze.components.BannerAdView
+import app.mindmaze.components.NoInternetDialog
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
@@ -39,11 +40,27 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 fun HomeScreen(
     onPlayClicked: () -> Unit
 ) {
+    val context = LocalContext.current
+    var showNoInternetDialog by remember { mutableStateOf(false) }
+
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bomb))
     val progress by animateLottieCompositionAsState(
         composition = composition,
         iterations = LottieConstants.IterateForever
     )
+
+    // Show dialog if no internet
+    if (showNoInternetDialog) {
+        NoInternetDialog(
+            onDismiss = { showNoInternetDialog = false },
+            onRetry = {
+                if (NetworkUtils.isInternetAvailable(context)) {
+                    showNoInternetDialog = false
+                    onPlayClicked()
+                }
+            }
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -77,7 +94,7 @@ fun HomeScreen(
                     )
 
                     Text(
-                        text = "Queen Puzzle Challenge",
+                        text = "Bomb Puzzle Challenge",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Light,
                         color = Color.Black.copy(alpha = 0.9f),
@@ -100,7 +117,14 @@ fun HomeScreen(
                 }
 
                 Button(
-                    onClick = onPlayClicked,
+                    onClick = {
+                        // Check internet connection before starting
+                        if (NetworkUtils.isInternetAvailable(context)) {
+                            onPlayClicked()
+                        } else {
+                            showNoInternetDialog = true
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp)
@@ -135,7 +159,6 @@ fun HomeScreen(
                     .padding(bottom = 16.dp)
                     .navigationBarsPadding()
             )
-
         }
     }
 }

@@ -1,6 +1,7 @@
 package app.mindmaze
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,8 +22,15 @@ import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+
+    private var appOpenAdManager: AppOpenAdManager? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 🔒 Verrouiller l'orientation en mode portrait
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
         enableEdgeToEdge()
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -37,6 +45,11 @@ class MainActivity : ComponentActivity() {
             println("✅ AdMob initialized")
         }
 
+        // Initialisation UNIQUE du gestionnaire App Open Ad
+        if (appOpenAdManager == null) {
+            appOpenAdManager = AppOpenAdManager(application)
+        }
+
         setContent {
             MindMazeTheme {
                 Surface(
@@ -49,10 +62,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-    /**
-     * Pré-charge les niveaux dès le lancement de l'app
-     */
     private fun preloadLevels(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -74,12 +83,8 @@ class MainActivity : ComponentActivity() {
             println("🔄 Nouvelle version détectée: $savedVersion → $currentVersion")
             clearAppCache(context)
             prefs.edit().putLong("saved_version_code", currentVersion).apply()
-            println("✅ Cache vidé et version mise à jour")
         } else if (savedVersion == -1L) {
             prefs.edit().putLong("saved_version_code", currentVersion).apply()
-            println("📱 Première installation détectée, version: $currentVersion")
-        } else {
-            println("✓ Même version: $currentVersion")
         }
     }
 
@@ -101,38 +106,30 @@ class MainActivity : ComponentActivity() {
     private fun clearAppCache(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                context.cacheDir?.let { cacheDir ->
-                    deleteDir(cacheDir)
-                    println("🗑️ Cache directory vidé")
-                }
-                context.externalCacheDir?.let { externalCacheDir ->
-                    deleteDir(externalCacheDir)
-                    println("🗑️ External cache directory vidé")
-                }
+                context.cacheDir?.deleteRecursively()
+                context.externalCacheDir?.deleteRecursively()
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                    context.codeCacheDir?.let { codeCacheDir ->
-                        deleteDir(codeCacheDir)
-                        println("🗑️ Code cache directory vidé")
-                    }
+                    context.codeCacheDir?.deleteRecursively()
                 }
+                println("✅ Cache vidé avec succès")
             } catch (e: Exception) {
                 e.printStackTrace()
-                println("❌ Erreur lors du vidage du cache: ${e.message}")
             }
         }
     }
 
-    private fun deleteDir(dir: File): Boolean {
-        if (dir.isDirectory) {
-            val children = dir.list()
-            children?.forEach { child ->
-                val success = deleteDir(File(dir, child))
-                if (!success) {
-                    return false
-                }
-            }
+    private fun File.deleteRecursively(): Boolean {
+        return if (isDirectory) {
+            listFiles()?.forEach { it.deleteRecursively() }
+            delete()
+        } else {
+            delete()
         }
-        return dir.delete()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        appOpenAdManager?.cleanup()
     }
 }
 
@@ -141,20 +138,8 @@ fun MindMazeApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
     when (currentScreen) {
-        Screen.Home -> {
-            HomeScreen(
-                onPlayClicked = {
-                    currentScreen = Screen.Game
-                }
-            )
-        }
-        Screen.Game -> {
-            GameScreen(
-                onBack = {
-                    currentScreen = Screen.Home
-                }
-            )
-        }
+        Screen.Home -> HomeScreen(onPlayClicked = { currentScreen = Screen.Game })
+        Screen.Game -> GameScreen(onBack = { currentScreen = Screen.Home })
     }
 }
 
