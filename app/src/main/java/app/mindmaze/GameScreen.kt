@@ -62,6 +62,9 @@ fun GameScreen(
     var isLoadingLevels by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
 
+    // État pour masquer le jeu pendant la transition
+    var isTransitioning by remember { mutableStateOf(false) }
+
     val currentIndex by viewModel.currentLevelIndex
     val boardState by derivedStateOf { viewModel.boardState }
     val hasWon by viewModel.hasWon
@@ -124,23 +127,25 @@ fun GameScreen(
 
     // Sauvegarde plateau
     LaunchedEffect(boardState) {
-        if (isFullyLoaded && !hasWon) {
+        if (isFullyLoaded && !hasWon && !isTransitioning) {
             LevelPreferences.saveBoardState(context, currentIndex, boardState)
         }
     }
 
     // Victoire - Passage automatique au niveau suivant
     LaunchedEffect(boardState, currentLevel) {
-        if (isFullyLoaded && !hasWon) {
+        if (isFullyLoaded && !hasWon && !isTransitioning) {
             val size = boardState.size
             val matrix = PuzzleLevels.buildMatrix(currentLevel!!, size)
             if (checkVictory(boardState, size, matrix)) {
                 viewModel.hasWon.value = true
                 LevelPreferences.clearBoardState(context, currentIndex)
 
+                // Masquer le jeu immédiatement pour éviter de voir le niveau précédent
+                isTransitioning = true
+
                 // Fonction pour passer au niveau suivant
                 val goToNextLevel = {
-                    viewModel.hasWon.value = false // Réinitialiser l'état de victoire
                     val next = currentIndex + 1
                     viewModel.currentLevelIndex.value = next
                     val nextLevel = levels!![next]
@@ -148,6 +153,10 @@ fun GameScreen(
                     viewModel.initBoard(nextSize, nextLevel)
                     val savedNext = LevelPreferences.loadBoardState(context, next, nextSize)
                     if (savedNext != null) viewModel.restoreBoardState(savedNext)
+
+                    // Réinitialiser les états après avoir chargé le nouveau niveau
+                    viewModel.hasWon.value = false
+                    isTransitioning = false
                 }
 
                 // Vérifier s'il y a un niveau suivant
@@ -165,6 +174,7 @@ fun GameScreen(
                     )
                 } else {
                     // Dernier niveau terminé, retour à l'écran précédent
+                    isTransitioning = false
                     onBack()
                 }
             }
@@ -195,7 +205,7 @@ fun GameScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        if (isFullyLoaded) {
+                        if (isFullyLoaded && !isTransitioning) {
                             Text(
                                 text = "Level ${currentIndex + 1}",
                                 fontSize = 24.sp,
@@ -238,10 +248,24 @@ fun GameScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .padding(bottom = 60.dp) // Marge pour la bannière publicitaire
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
                 when {
+                    // Afficher loader pendant la transition entre niveaux
+                    isTransitioning -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
+                            Spacer(Modifier.height(32.dp))
+                            Text(
+                                "Loading next level...",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                        }
+                    }
                     // Afficher erreur si échec de chargement
                     loadError != null -> {
                         Column(
@@ -287,11 +311,17 @@ fun GameScreen(
             }
         }
 
-        BannerAdView(
+        Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-        )
+                .background(Color.White) // Background opaque pour éviter la transparence
+                .padding(bottom = 8.dp) // Marge en bas pour les téléphones avec barre de navigation
+        ) {
+            BannerAdView(
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
 
         if (showTutorial) {
             TutorialOverlay(onSkip = {
