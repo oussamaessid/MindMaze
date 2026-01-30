@@ -1,6 +1,7 @@
 package app.mindmaze
 
 import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,11 @@ fun GameScreen(
     val currentIndex by viewModel.currentLevelIndex
     val boardState by derivedStateOf { viewModel.boardState }
     val hasWon by viewModel.hasWon
+
+    // Gestion du bouton retour système
+    BackHandler(enabled = true) {
+        onBack()
+    }
 
     LaunchedEffect(Unit) {
         if (!NetworkUtils.isInternetAvailable(context)) {

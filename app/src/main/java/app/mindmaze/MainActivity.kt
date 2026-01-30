@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
@@ -136,9 +137,23 @@ class MainActivity : ComponentActivity() {
 fun MindMazeApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
+    // Gestion du bouton retour système
+    BackHandler(enabled = currentScreen == Screen.Game) {
+        // Retour au menu depuis le jeu
+        currentScreen = Screen.Home
+    }
+
     when (currentScreen) {
-        Screen.Home -> HomeScreen(onPlayClicked = { currentScreen = Screen.Game })
-        Screen.Game -> GameScreen(onBack = { currentScreen = Screen.Home })
+        Screen.Home -> HomeScreen(
+            onPlayClicked = {
+                currentScreen = Screen.Game
+            }
+        )
+        Screen.Game -> GameScreen(
+            onBack = {
+                currentScreen = Screen.Home
+            }
+        )
     }
 }
 
