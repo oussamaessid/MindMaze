@@ -2,9 +2,11 @@ package app.mindmaze.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import app.mindmaze.AdConfig
 import com.google.android.gms.ads.AdRequest
@@ -18,6 +20,7 @@ fun BannerAdView(
     AndroidView(
         modifier = modifier
             .fillMaxWidth()
+            .height(50.dp) // ✅ Hauteur fixe pour AdMob BANNER (50dp)
             .background(Color.White),
         factory = { context ->
             AdView(context).apply {

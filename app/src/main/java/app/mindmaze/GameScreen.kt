@@ -254,7 +254,6 @@ fun GameScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(bottom = 60.dp) // Marge pour la bannière publicitaire
                     .background(Color.White),
                 contentAlignment = Alignment.Center
             ) {
@@ -317,12 +316,12 @@ fun GameScreen(
             }
         }
 
+        // ✅ SOLUTION: Bannière publicitaire sans box rose
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color.White) // Background opaque pour éviter la transparence
-                .padding(bottom = 8.dp) // Marge en bas pour les téléphones avec barre de navigation
+                .background(Color.White)
         ) {
             BannerAdView(
                 modifier = Modifier.fillMaxWidth()
