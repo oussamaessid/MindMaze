@@ -46,6 +46,9 @@ import app.mindmaze.components.checkVictory
 import app.mindmaze.data.model.PuzzleLevel
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.vm.GameViewModel
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.asPaddingValues
 
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -316,11 +319,12 @@ fun GameScreen(
             }
         }
 
-        // ✅ SOLUTION: Bannière publicitaire sans box rose
+        // ✅ Bannière publicitaire positionnée au-dessus de la barre de navigation système
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .padding(WindowInsets.navigationBars.asPaddingValues()) // Positionne au-dessus du clavier/navbar
                 .background(Color.White)
         ) {
             BannerAdView(
