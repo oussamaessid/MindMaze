@@ -22,7 +22,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-4161995857939030~5034993382"/>
+            android:value="ca-app-pub-2498267529185476~3060402169"/>
 
         <activity
             android:name="app.mindmaze.MainActivity"

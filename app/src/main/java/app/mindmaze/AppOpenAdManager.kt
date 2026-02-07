@@ -33,7 +33,7 @@ class AppOpenAdManager(
 
         private const val USE_TEST_AD = false
 
-        private const val APP_OPEN_AD_UNIT_ID_REAL = "ca-app-pub-4161995857939030/3809442902"
+        private const val APP_OPEN_AD_UNIT_ID_REAL = "ca-app-pub-2498267529185476/4451075692"
 
         private const val APP_OPEN_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/9257395921"
 
