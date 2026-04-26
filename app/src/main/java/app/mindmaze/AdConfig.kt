@@ -3,11 +3,11 @@ package app.mindmaze
 object AdConfig {
     // Banner Ads
     const val BANNER_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/6300978111"
-    const val BANNER_AD_UNIT_ID_REAL = "ca-app-pub-2498267529185476/7348701775"
+    const val BANNER_AD_UNIT_ID_REAL = "ca-app-pub-9651830078758870/2032871230"
 
     // Interstitial Ads
     const val INTERSTITIAL_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/1033173712"
-    const val INTERSTITIAL_AD_UNIT_ID_REAL = "ca-app-pub-2498267529185476/1110596481"
+    const val INTERSTITIAL_AD_UNIT_ID_REAL = "ca-app-pub-9651830078758870/8901531919"
 
     // Toggle entre test et production
     const val USE_TEST_ADS = false // Mettez false pour utiliser les vraies pubs
