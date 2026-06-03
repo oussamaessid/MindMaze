@@ -3,32 +3,13 @@ package app.mindmaze
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,17 +19,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import app.mindmaze.components.BannerAdView
-import app.mindmaze.components.NoInternetDialog
-import app.mindmaze.components.PuzzleGame
-import app.mindmaze.components.TutorialOverlay
-import app.mindmaze.components.checkVictory
+import app.mindmaze.components.*
 import app.mindmaze.data.model.PuzzleLevel
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.vm.GameViewModel
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.asPaddingValues
 
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,9 +39,10 @@ fun GameScreen(
     var showNoInternetDialog by remember { mutableStateOf(false) }
     var isLoadingLevels by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
-
-    // État pour masquer le jeu pendant la transition
     var isTransitioning by remember { mutableStateOf(false) }
+
+    // ✅ NOUVEAU - Dialog "Jeu terminé"
+    var showGameCompletedDialog by remember { mutableStateOf(false) }
 
     val currentIndex by viewModel.currentLevelIndex
     val boardState by derivedStateOf { viewModel.boardState }
@@ -141,7 +116,7 @@ fun GameScreen(
         }
     }
 
-    // Victoire - Passage automatique au niveau suivant
+    // ✅ Victoire - Passage automatique au niveau suivant
     LaunchedEffect(boardState, currentLevel) {
         if (isFullyLoaded && !hasWon && !isTransitioning) {
             val size = boardState.size
@@ -150,62 +125,109 @@ fun GameScreen(
                 viewModel.hasWon.value = true
                 LevelPreferences.clearBoardState(context, currentIndex)
 
-                // Masquer le jeu immédiatement pour éviter de voir le niveau précédent
                 isTransitioning = true
 
-                // Fonction pour passer au niveau suivant
                 val goToNextLevel = {
                     val next = currentIndex + 1
-                    viewModel.currentLevelIndex.value = next
-                    val nextLevel = levels!![next]
-                    val nextSize = PuzzleLevels.getBoardSize(nextLevel)
-                    viewModel.initBoard(nextSize, nextLevel)
-                    val savedNext = LevelPreferences.loadBoardState(context, next, nextSize)
-                    if (savedNext != null) viewModel.restoreBoardState(savedNext)
 
-                    // Réinitialiser les états après avoir chargé le nouveau niveau
-                    viewModel.hasWon.value = false
-                    isTransitioning = false
+                    // ✅ Vérifier s'il y a un niveau suivant
+                    if (next <= (levels?.lastIndex ?: 0)) {
+                        viewModel.currentLevelIndex.value = next
+                        val nextLevel = levels!![next]
+                        val nextSize = PuzzleLevels.getBoardSize(nextLevel)
+                        viewModel.initBoard(nextSize, nextLevel)
+                        val savedNext = LevelPreferences.loadBoardState(context, next, nextSize)
+                        if (savedNext != null) viewModel.restoreBoardState(savedNext)
+
+                        viewModel.hasWon.value = false
+                        isTransitioning = false
+                    } else {
+                        // ✅ C'était le dernier niveau!
+                        LevelPreferences.setAllLevelsCompleted(context)
+                        isTransitioning = false
+                        // Afficher la dialog avant de revenir
+                        showGameCompletedDialog = true
+                    }
                 }
 
-                // Vérifier s'il y a un niveau suivant
-                if (currentIndex < (levels?.lastIndex ?: 0)) {
-                    // Afficher la publicité puis passer automatiquement au niveau suivant
-                    interstitialAdManager.showAd(
-                        onAdDismissed = {
-                            // Pub terminée -> Passer au niveau suivant
-                            goToNextLevel()
-                        },
-                        onAdFailed = {
-                            // Pub échouée -> Passer quand même au niveau suivant
-                            goToNextLevel()
-                        }
-                    )
-                } else {
-                    // Dernier niveau terminé, retour à l'écran précédent
-                    isTransitioning = false
-                    onBack()
-                }
+                // Afficher pub puis passer au niveau suivant
+                interstitialAdManager.showAd(
+                    onAdDismissed = { goToNextLevel() },
+                    onAdFailed = { goToNextLevel() }
+                )
             }
         }
     }
 
-    // Show no internet dialog
+    // Dialog pas d'internet
     if (showNoInternetDialog) {
         NoInternetDialog(
             onDismiss = {
                 showNoInternetDialog = false
-                onBack() // Retourner à l'écran d'accueil si pas d'Internet
+                onBack()
             },
             onRetry = {
                 if (NetworkUtils.isInternetAvailable(context)) {
                     showNoInternetDialog = false
                     isLoadingLevels = true
                     loadError = null
-                    // Relancer le chargement
                     viewModel.currentLevelIndex.value = 0
                 }
             }
+        )
+    }
+
+    // ✅ Dialog "Jeu terminé"
+    if (showGameCompletedDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showGameCompletedDialog = false
+                onBack()
+            },
+            title = {
+                Text(
+                    text = "🏆 Félicitations!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "Vous avez complété tous les niveaux!\n\nAttendez les prochains niveaux dans la mise à jour suivante 🚀",
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF64748B),
+                    modifier = Modifier.fillMaxWidth(),
+                    lineHeight = 24.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showGameCompletedDialog = false
+                        onBack()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Black,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        "Retour à l'accueil",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            },
+            modifier = Modifier.padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White
         )
     }
 
@@ -217,7 +239,7 @@ fun GameScreen(
                         if (isFullyLoaded && !isTransitioning) {
                             Text(
                                 text = "Level ${currentIndex + 1}",
-                                fontSize = 24.sp,
+                                fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
                                 modifier = Modifier.fillMaxWidth(),
@@ -231,7 +253,7 @@ fun GameScreen(
                         IconButton(onClick = onBack) {
                             Icon(
                                 imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Back",
+                                contentDescription = "Retour",
                                 tint = Color.Black,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -241,7 +263,7 @@ fun GameScreen(
                         IconButton(onClick = { showTutorial = true }) {
                             Icon(
                                 imageVector = Icons.Default.Info,
-                                contentDescription = "Help",
+                                contentDescription = "Aide",
                                 tint = Color.Black,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -261,20 +283,19 @@ fun GameScreen(
                 contentAlignment = Alignment.Center
             ) {
                 when {
-                    // Afficher loader pendant la transition entre niveaux
                     isTransitioning -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
                             Spacer(Modifier.height(32.dp))
                             Text(
-                                "Loading next level...",
-                                fontSize = 24.sp,
+                                "Chargement du prochain niveau...",
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
                         }
                     }
-                    // Afficher erreur si échec de chargement
+
                     loadError != null -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -294,20 +315,20 @@ fun GameScreen(
                             )
                         }
                     }
-                    // Afficher loader pendant le chargement
+
                     isLoadingLevels -> {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
                             Spacer(Modifier.height(32.dp))
                             Text(
-                                "Loading level...",
-                                fontSize = 24.sp,
+                                "Chargement du niveau...",
+                                fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
                         }
                     }
-                    // Afficher le jeu une fois chargé
+
                     isFullyLoaded -> {
                         PuzzleGame(
                             level = currentLevel!!,
@@ -319,12 +340,12 @@ fun GameScreen(
             }
         }
 
-        // ✅ Bannière publicitaire positionnée au-dessus de la barre de navigation système
+        // Banner ad en bas
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(WindowInsets.navigationBars.asPaddingValues()) // Positionne au-dessus du clavier/navbar
+                .padding(WindowInsets.navigationBars.asPaddingValues())
                 .background(Color.White)
         ) {
             BannerAdView(

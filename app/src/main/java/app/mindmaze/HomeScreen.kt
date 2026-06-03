@@ -1,24 +1,11 @@
 package app.mindmaze
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +29,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var showNoInternetDialog by remember { mutableStateOf(false) }
+    var showGameCompletedDialog by remember { mutableStateOf(false) }
 
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.bomb))
     val progress by animateLottieCompositionAsState(
@@ -49,7 +37,14 @@ fun HomeScreen(
         iterations = LottieConstants.IterateForever
     )
 
-    // Show dialog if no internet
+    // Vérifier au démarrage si tous les niveaux sont complétés
+    LaunchedEffect(Unit) {
+        if (LevelPreferences.isAllLevelsCompleted(context)) {
+            showGameCompletedDialog = true
+        }
+    }
+
+    // Dialog - Pas d'internet
     if (showNoInternetDialog) {
         NoInternetDialog(
             onDismiss = { showNoInternetDialog = false },
@@ -59,6 +54,54 @@ fun HomeScreen(
                     onPlayClicked()
                 }
             }
+        )
+    }
+
+    // ✅ Dialog "Jeu complété"
+    if (showGameCompletedDialog) {
+        AlertDialog(
+            onDismissRequest = { showGameCompletedDialog = false },
+            title = {
+                Text(
+                    text = "🏆 Félicitations!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color.Black
+                )
+            },
+            text = {
+                Text(
+                    text = "Vous avez complété tous les niveaux disponibles!\n\nAttendez les prochains niveaux dans la mise à jour suivante 🚀",
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Center,
+                    color = Color(0xFF64748B),
+                    modifier = Modifier.fillMaxWidth(),
+                    lineHeight = 24.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showGameCompletedDialog = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Black,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        "D'accord",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            },
+            modifier = Modifier.padding(16.dp),
+            shape = RoundedCornerShape(20.dp),
+            containerColor = Color.White
         )
     }
 
@@ -81,6 +124,7 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                // Header - Logo et titre
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(top = 60.dp)
@@ -103,6 +147,7 @@ fun HomeScreen(
                     )
                 }
 
+                // Animation
                 Box(
                     modifier = Modifier
                         .weight(1f)
@@ -116,13 +161,22 @@ fun HomeScreen(
                     )
                 }
 
+                // Bouton START
                 Button(
                     onClick = {
-                        // Check internet connection before starting
-                        if (NetworkUtils.isInternetAvailable(context)) {
-                            onPlayClicked()
-                        } else {
-                            showNoInternetDialog = true
+                        when {
+                            // Pas d'internet
+                            !NetworkUtils.isInternetAvailable(context) -> {
+                                showNoInternetDialog = true
+                            }
+                            // ✅ Tous les niveaux terminés
+                            LevelPreferences.isAllLevelsCompleted(context) -> {
+                                showGameCompletedDialog = true
+                            }
+                            // Navigation normale
+                            else -> {
+                                onPlayClicked()
+                            }
                         }
                     },
                     modifier = Modifier
@@ -153,6 +207,7 @@ fun HomeScreen(
                 }
             }
 
+            // Banner Ad
             BannerAdView(
                 modifier = Modifier
                     .fillMaxWidth()

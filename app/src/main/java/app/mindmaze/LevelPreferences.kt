@@ -8,33 +8,24 @@ object LevelPreferences {
     private const val PREF_NAME = "mindmaze_preferences"
     private const val KEY_LAST_LEVEL = "last_level_index"
     private const val KEY_BOARD_STATE = "board_state"
+    private const val KEY_ALL_LEVELS_COMPLETED = "all_levels_completed"
     private const val TAG = "LevelPreferences"
 
     private fun getPrefs(context: Context): SharedPreferences {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
     }
 
-    /**
-     * Sauvegarde l'index du dernier niveau joué
-     */
     fun saveLastLevel(context: Context, levelIndex: Int) {
         getPrefs(context).edit().putInt(KEY_LAST_LEVEL, levelIndex).apply()
         Log.d(TAG, "✅ Saved last level: $levelIndex")
     }
 
-    /**
-     * Charge l'index du dernier niveau joué
-     * Retourne 0 par défaut (premier niveau)
-     */
     fun loadLastLevel(context: Context): Int {
         val level = getPrefs(context).getInt(KEY_LAST_LEVEL, 0)
         Log.d(TAG, "📂 Loaded last level: $level")
         return level
     }
 
-    /**
-     * Sauvegarde l'état du plateau pour un niveau spécifique
-     */
     fun saveBoardState(context: Context, levelIndex: Int, boardState: List<List<Int>>) {
         val stateString = boardState.joinToString(";") { row ->
             row.joinToString(",")
@@ -43,15 +34,10 @@ object LevelPreferences {
             .putString("${KEY_BOARD_STATE}_$levelIndex", stateString)
             .apply()
 
-        // Compter les bombes placées
         val bombCount = boardState.sumOf { row -> row.count { it == 2 } }
         Log.d(TAG, "💾 Saved board state for level $levelIndex - Bombs: $bombCount")
     }
 
-    /**
-     * Charge l'état du plateau pour un niveau spécifique
-     * Retourne null si aucune sauvegarde n'existe
-     */
     fun loadBoardState(context: Context, levelIndex: Int, defaultSize: Int): List<List<Int>>? {
         val stateString = getPrefs(context).getString("${KEY_BOARD_STATE}_$levelIndex", null)
         return if (stateString.isNullOrEmpty()) {
@@ -72,9 +58,6 @@ object LevelPreferences {
         }
     }
 
-    /**
-     * Efface l'état sauvegardé d'un niveau (utile après victoire)
-     */
     fun clearBoardState(context: Context, levelIndex: Int) {
         getPrefs(context).edit()
             .remove("${KEY_BOARD_STATE}_$levelIndex")
@@ -82,9 +65,26 @@ object LevelPreferences {
         Log.d(TAG, "🗑️ Cleared board state for level $levelIndex")
     }
 
-    /**
-     * Réinitialise toutes les préférences
-     */
+    fun setAllLevelsCompleted(context: Context) {
+        getPrefs(context).edit()
+            .putBoolean(KEY_ALL_LEVELS_COMPLETED, true)
+            .apply()
+        Log.d(TAG, "🏆 All levels completed saved")
+    }
+
+    fun isAllLevelsCompleted(context: Context): Boolean {
+        val completed = getPrefs(context).getBoolean(KEY_ALL_LEVELS_COMPLETED, false)
+        Log.d(TAG, "🔍 All levels completed: $completed")
+        return completed
+    }
+
+    fun resetAllLevelsCompleted(context: Context) {
+        getPrefs(context).edit()
+            .putBoolean(KEY_ALL_LEVELS_COMPLETED, false)
+            .apply()
+        Log.d(TAG, "🔄 All levels completed reset")
+    }
+
     fun resetAll(context: Context) {
         getPrefs(context).edit().clear().apply()
         Log.d(TAG, "🔄 Reset all preferences")
