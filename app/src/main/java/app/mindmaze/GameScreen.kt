@@ -273,6 +273,14 @@ fun GameScreen(
                         containerColor = Color.White
                     )
                 )
+            },
+            // Banner placée dans bottomBar pour qu'elle ne chevauche jamais le contenu du jeu
+            bottomBar = {
+                BannerAdView(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                )
             }
         ) { padding ->
             Box(
@@ -338,19 +346,6 @@ fun GameScreen(
                     }
                 }
             }
-        }
-
-        // Banner ad en bas
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(WindowInsets.navigationBars.asPaddingValues())
-                .background(Color.White)
-        ) {
-            BannerAdView(
-                modifier = Modifier.fillMaxWidth()
-            )
         }
 
         if (showTutorial) {

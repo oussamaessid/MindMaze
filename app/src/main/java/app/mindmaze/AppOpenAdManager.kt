@@ -27,6 +27,7 @@ class AppOpenAdManager(
     private var currentActivity: Activity? = null
     private var isShowingAd = false
     private var lastAdShownTime: Long = 0
+    private val appLaunchTime: Long = System.currentTimeMillis()
 
     companion object {
         private const val TAG = "AppOpenAdManager"
@@ -39,6 +40,10 @@ class AppOpenAdManager(
 
         private const val AD_TIMEOUT_MS = 4 * 3600 * 1000L
         private const val MIN_AD_INTERVAL_MS = 4 * 3600 * 1000L
+        // Délai minimum après lancement avant d'afficher une pub (évite les clics accidentels)
+        private const val MIN_LAUNCH_DELAY_MS = 5000L
+        // Délai avant affichage quand l'app repasse au premier plan
+        private const val FOREGROUND_DELAY_MS = 2000L
     }
 
     init {
@@ -76,12 +81,7 @@ class AppOpenAdManager(
                     appOpenAd = ad
                     isLoadingAd = false
                     loadTime = Date().time
-
-                    if (!isShowingAd && lastAdShownTime == 0L) {
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            currentActivity?.let { showAdIfAvailable(it) }
-                        }, 800)
-                    }
+                    // Ne pas auto-afficher au chargement : l'affichage est géré par onAppForegrounded
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
@@ -101,6 +101,8 @@ class AppOpenAdManager(
     }
 
     private fun canShowAd(): Boolean {
+        // Ne pas afficher si l'app vient d'être lancée (évite les clics accidentels au démarrage)
+        if (System.currentTimeMillis() - appLaunchTime < MIN_LAUNCH_DELAY_MS) return false
         if (lastAdShownTime == 0L) return true
         val elapsed = System.currentTimeMillis() - lastAdShownTime
         return elapsed >= MIN_AD_INTERVAL_MS
@@ -141,11 +143,12 @@ class AppOpenAdManager(
     @OnLifecycleEvent(Lifecycle.Event.ON_START)
     fun onAppForegrounded() {
         Log.d(TAG, "📱 App to FOREGROUND")
+        // Délai de 2 secondes pour que l'utilisateur voie l'écran avant la pub
         Handler(Looper.getMainLooper()).postDelayed({
             currentActivity?.let {
                 if (!isShowingAd) showAdIfAvailable(it)
             }
-        }, 500)
+        }, FOREGROUND_DELAY_MS)
     }
 
     override fun onActivityStarted(activity: Activity) {
