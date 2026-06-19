@@ -13,6 +13,12 @@ import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 class InterstitialAdManager(private val context: Context) {
     private var interstitialAd: InterstitialAd? = null
     private var isLoading = false
+    private var lastShownTime: Long = 0L
+
+    companion object {
+        // Minimum 3 minutes between two interstitials
+        private const val MIN_INTERVAL_MS = 3 * 60 * 1000L
+    }
 
     init {
         loadAd()
@@ -63,6 +69,13 @@ class InterstitialAdManager(private val context: Context) {
             return
         }
 
+        val elapsed = System.currentTimeMillis() - lastShownTime
+        if (lastShownTime != 0L && elapsed < MIN_INTERVAL_MS) {
+            println("⏳ Interstitiel ignoré (trop tôt: ${elapsed / 1000}s < ${MIN_INTERVAL_MS / 1000}s)")
+            onAdDismissed()
+            return
+        }
+
         if (interstitialAd != null) {
             println("🎬 Affichage de la pub interstitielle...")
 
@@ -70,6 +83,7 @@ class InterstitialAdManager(private val context: Context) {
                 override fun onAdDismissedFullScreenContent() {
                     println("✅ Pub fermée par l'utilisateur")
                     interstitialAd = null
+                    lastShownTime = System.currentTimeMillis()
                     loadAd()
                     onAdDismissed()
                 }

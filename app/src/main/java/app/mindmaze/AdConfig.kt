@@ -9,8 +9,8 @@ object AdConfig {
     const val INTERSTITIAL_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/1033173712"
     const val INTERSTITIAL_AD_UNIT_ID_REAL = "ca-app-pub-9651830078758870/8901531919"
 
-    // Toggle entre test et production
-    const val USE_TEST_ADS = false // Mettez false pour utiliser les vraies pubs
+    // Automatique : test en debug, production en release
+    val USE_TEST_ADS: Boolean = BuildConfig.USE_TEST_ADS
 
     fun getBannerAdId(): String {
         return if (USE_TEST_ADS) BANNER_AD_UNIT_ID_TEST else BANNER_AD_UNIT_ID_REAL

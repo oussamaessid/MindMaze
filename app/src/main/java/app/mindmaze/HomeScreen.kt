@@ -207,11 +207,11 @@ fun HomeScreen(
                 }
             }
 
-            // Banner Ad
+            // Banner Ad — margin top pour éviter clics accidentels sur le bouton START
+            Spacer(modifier = Modifier.height(8.dp))
             BannerAdView(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 16.dp)
                     .navigationBarsPadding()
             )
         }

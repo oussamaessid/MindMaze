@@ -2,6 +2,7 @@ package app.mindmaze
 
 import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,13 +27,17 @@ class AppOpenAdManager(
     private var loadTime: Long = 0
     private var currentActivity: Activity? = null
     private var isShowingAd = false
-    private var lastAdShownTime: Long = 0
     private val appLaunchTime: Long = System.currentTimeMillis()
+
+    private val prefs = application.getSharedPreferences("admob_prefs", Context.MODE_PRIVATE)
+    private var lastAdShownTime: Long
+        get() = prefs.getLong("last_app_open_ad_time", 0L)
+        set(value) = prefs.edit().putLong("last_app_open_ad_time", value).apply()
 
     companion object {
         private const val TAG = "AppOpenAdManager"
 
-        private const val USE_TEST_AD = false
+        private val USE_TEST_AD: Boolean = BuildConfig.USE_TEST_ADS
 
         private const val APP_OPEN_AD_UNIT_ID_REAL = "ca-app-pub-9651830078758870/8274845951"
 

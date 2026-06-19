@@ -276,11 +276,14 @@ fun GameScreen(
             },
             // Banner placée dans bottomBar pour qu'elle ne chevauche jamais le contenu du jeu
             bottomBar = {
-                BannerAdView(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                )
+                Column {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    BannerAdView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                    )
+                }
             }
         ) { padding ->
             Box(
