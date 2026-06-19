@@ -233,6 +233,7 @@ fun GameScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
+            containerColor = Color.White,
             topBar = {
                 TopAppBar(
                     title = {

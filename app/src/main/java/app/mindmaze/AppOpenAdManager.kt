@@ -44,7 +44,7 @@ class AppOpenAdManager(
         private const val APP_OPEN_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/9257395921"
 
         private const val AD_TIMEOUT_MS = 4 * 3600 * 1000L
-        private const val MIN_AD_INTERVAL_MS = 4 * 3600 * 1000L
+        private const val MIN_AD_INTERVAL_MS = 30 * 60 * 1000L
         // Délai minimum après lancement avant d'afficher une pub (évite les clics accidentels)
         private const val MIN_LAUNCH_DELAY_MS = 5000L
         // Délai avant affichage quand l'app repasse au premier plan

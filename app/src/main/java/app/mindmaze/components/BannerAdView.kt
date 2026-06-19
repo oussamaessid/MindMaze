@@ -20,7 +20,7 @@ fun BannerAdView(
     AndroidView(
         modifier = modifier
             .fillMaxWidth()
-            .height(50.dp) // ✅ Hauteur fixe pour AdMob BANNER (50dp)
+            .height(50.dp)
             .background(Color.White),
         factory = { context ->
             AdView(context).apply {

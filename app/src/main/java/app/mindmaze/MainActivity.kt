@@ -43,11 +43,9 @@ class MainActivity : ComponentActivity() {
 
         MobileAds.initialize(this) {
             println("✅ AdMob initialized")
-        }
-
-        // Initialisation UNIQUE du gestionnaire App Open Ad
-        if (appOpenAdManager == null) {
-            appOpenAdManager = AppOpenAdManager(application)
+            if (appOpenAdManager == null) {
+                appOpenAdManager = AppOpenAdManager(application)
+            }
         }
 
         setContent {
