@@ -2,7 +2,11 @@ package app.mindmaze
 
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,6 +26,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.mindmaze.components.*
 import app.mindmaze.data.model.PuzzleLevel
 import app.mindmaze.data.repositoryImp.PuzzleLevels
+import app.mindmaze.lives.LivesViewModel
+import app.mindmaze.rules.RulesValidator
 import app.mindmaze.vm.GameViewModel
 
 @SuppressLint("UnrememberedMutableState")
@@ -29,10 +35,10 @@ import app.mindmaze.vm.GameViewModel
 @Composable
 fun GameScreen(
     onBack: () -> Unit,
-    viewModel: GameViewModel = viewModel()
+    viewModel: GameViewModel = viewModel(),
+    livesViewModel: LivesViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val interstitialAdManager = remember { InterstitialAdManager(context) }
 
     var levels by remember { mutableStateOf<List<PuzzleLevel>?>(null) }
     var showTutorial by remember { mutableStateOf(!TutorialPreferences.isTutorialShown(context)) }
@@ -40,59 +46,63 @@ fun GameScreen(
     var isLoadingLevels by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var isTransitioning by remember { mutableStateOf(false) }
-
-    // ✅ NOUVEAU - Dialog "Jeu terminé"
     var showGameCompletedDialog by remember { mutableStateOf(false) }
+
+    val lives by livesViewModel.lives
+    val timeToNextLife by livesViewModel.timeToNextLife
+    var showLevelSuccess by remember { mutableStateOf(false) }
+    var showBrokenHeart by remember { mutableStateOf(false) }
+    var violationMessage by remember { mutableStateOf("") }
+    var showLivesDialog by remember { mutableStateOf(false) }
+
+    val shakeOffset = remember { Animatable(0f) }
+    var shakeKey by remember { mutableStateOf(0) }
+    LaunchedEffect(shakeKey) {
+        if (shakeKey > 0) {
+            repeat(4) { i -> shakeOffset.animateTo(if (i % 2 == 0) -18f else 18f, tween(60)) }
+            shakeOffset.animateTo(0f, tween(60))
+        }
+    }
+
+    var prevBombCount by remember { mutableStateOf(-1) }
+    var lastPlacedBombCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
 
     val currentIndex by viewModel.currentLevelIndex
     val boardState by derivedStateOf { viewModel.boardState }
     val hasWon by viewModel.hasWon
 
-    // Gestion du bouton retour système
-    BackHandler(enabled = true) {
-        onBack()
-    }
+    BackHandler(enabled = true) { onBack() }
 
+    // ── Load levels ────────────────────────────────────────────────────────────
     LaunchedEffect(Unit) {
+        livesViewModel.refresh()
         if (!NetworkUtils.isInternetAvailable(context)) {
             showNoInternetDialog = true
             isLoadingLevels = false
             return@LaunchedEffect
         }
-
         try {
             val loadedLevels = PuzzleLevels.loadLevelsFromRemote(context)
             if (loadedLevels.isEmpty()) {
                 levels = loadedLevels
                 viewModel.currentLevelIndex.value = 0
-                loadError = "Aucun niveau disponible"
+                loadError = "No levels available"
                 isLoadingLevels = false
                 return@LaunchedEffect
             }
-
             levels = loadedLevels
-
-            val lastSavedIndex = LevelPreferences.loadLastLevel(context)
-                .coerceIn(0, loadedLevels.lastIndex)
-
+            val lastSavedIndex = LevelPreferences.loadLastLevel(context).coerceIn(0, loadedLevels.lastIndex)
             viewModel.currentLevelIndex.value = lastSavedIndex
-
             val currentLevel = loadedLevels[lastSavedIndex]
             val size = PuzzleLevels.getBoardSize(currentLevel)
             viewModel.initBoard(size, currentLevel)
-
             val savedBoard = LevelPreferences.loadBoardState(context, lastSavedIndex, size)
-            if (savedBoard != null && savedBoard.size == size) {
-                viewModel.restoreBoardState(savedBoard)
-            }
-
+            if (savedBoard != null && savedBoard.size == size) viewModel.restoreBoardState(savedBoard)
             isLoadingLevels = false
         } catch (e: Exception) {
-            loadError = "Erreur de chargement: ${e.message}"
+            loadError = "Loading error: ${e.message}"
             isLoadingLevels = false
-            if (!NetworkUtils.isInternetAvailable(context)) {
-                showNoInternetDialog = true
-            }
+            if (!NetworkUtils.isInternetAvailable(context)) showNoInternetDialog = true
         }
     }
 
@@ -100,72 +110,77 @@ fun GameScreen(
     val isFullyLoaded =
         levels != null && currentLevel != null && viewModel.isBoardReady && boardState.isNotEmpty()
 
-    // Sauvegarde index
     LaunchedEffect(currentIndex) {
-        levels?.let {
-            if (currentIndex in it.indices) {
-                LevelPreferences.saveLastLevel(context, currentIndex)
-            }
-        }
+        levels?.let { if (currentIndex in it.indices) LevelPreferences.saveLastLevel(context, currentIndex) }
     }
-
-    // Sauvegarde plateau
     LaunchedEffect(boardState) {
         if (isFullyLoaded && !hasWon && !isTransitioning) {
             LevelPreferences.saveBoardState(context, currentIndex, boardState)
         }
     }
 
-    // ✅ Victoire - Passage automatique au niveau suivant
+    // ── Auto-victory detection ─────────────────────────────────────────────────
     LaunchedEffect(boardState, currentLevel) {
-        if (isFullyLoaded && !hasWon && !isTransitioning) {
+        if (isFullyLoaded && !hasWon && !isTransitioning && !showLevelSuccess) {
             val size = boardState.size
             val matrix = PuzzleLevels.buildMatrix(currentLevel!!, size)
             if (checkVictory(boardState, size, matrix)) {
                 viewModel.hasWon.value = true
                 LevelPreferences.clearBoardState(context, currentIndex)
-
-                isTransitioning = true
-
-                val goToNextLevel = {
-                    val next = currentIndex + 1
-
-                    // ✅ Vérifier s'il y a un niveau suivant
-                    if (next <= (levels?.lastIndex ?: 0)) {
-                        viewModel.currentLevelIndex.value = next
-                        val nextLevel = levels!![next]
-                        val nextSize = PuzzleLevels.getBoardSize(nextLevel)
-                        viewModel.initBoard(nextSize, nextLevel)
-                        val savedNext = LevelPreferences.loadBoardState(context, next, nextSize)
-                        if (savedNext != null) viewModel.restoreBoardState(savedNext)
-
-                        viewModel.hasWon.value = false
-                        isTransitioning = false
-                    } else {
-                        // ✅ C'était le dernier niveau!
-                        LevelPreferences.setAllLevelsCompleted(context)
-                        isTransitioning = false
-                        // Afficher la dialog avant de revenir
-                        showGameCompletedDialog = true
-                    }
-                }
-
-                // Afficher pub puis passer au niveau suivant
-                interstitialAdManager.showAd(
-                    onAdDismissed = { goToNextLevel() },
-                    onAdFailed = { goToNextLevel() }
-                )
+                showLevelSuccess = true
             }
         }
     }
 
-    // Dialog pas d'internet
+    // ── Auto-violation: fires when a new bomb is placed ────────────────────────
+    LaunchedEffect(boardState) {
+        if (!isFullyLoaded || isTransitioning || hasWon || showLevelSuccess) return@LaunchedEffect
+        val bombCount = boardState.sumOf { row -> row.count { it == 2 } }
+        if (prevBombCount == -1) { prevBombCount = bombCount; return@LaunchedEffect }
+        if (bombCount > prevBombCount) {
+            val size = boardState.size
+            val matrix = PuzzleLevels.buildMatrix(currentLevel!!, size)
+            val result = RulesValidator.validate(boardState, matrix, size)
+            if (result.hasViolation) {
+                // Remove the offending bomb immediately so the board is clean before the animation
+                lastPlacedBombCell?.let { (r, c) ->
+                    if (boardState.getOrNull(r)?.getOrNull(c) == 2) {
+                        viewModel.clearCell(r, c)
+                    }
+                }
+                livesViewModel.loseLife()
+                shakeKey++
+                violationMessage = result.message
+                showBrokenHeart = true
+            }
+        }
+        prevBombCount = bombCount
+    }
+
+    // ── Advance to next level ─────────────────────────────────────────────────
+    val goToNextLevel: () -> Unit = {
+        prevBombCount = -1
+        val next = currentIndex + 1
+        if (next <= (levels?.lastIndex ?: 0)) {
+            viewModel.currentLevelIndex.value = next
+            val nextLevel = levels!![next]
+            val nextSize = PuzzleLevels.getBoardSize(nextLevel)
+            viewModel.initBoard(nextSize, nextLevel)
+            val savedNext = LevelPreferences.loadBoardState(context, next, nextSize)
+            if (savedNext != null) viewModel.restoreBoardState(savedNext)
+            viewModel.hasWon.value = false
+            isTransitioning = false
+        } else {
+            LevelPreferences.setAllLevelsCompleted(context)
+            isTransitioning = false
+            showGameCompletedDialog = true
+        }
+    }
+
+    // ── Dialogs ───────────────────────────────────────────────────────────────
     if (showNoInternetDialog) {
         NoInternetDialog(
-            onDismiss = {
-                showNoInternetDialog = false
-                onBack()
-            },
+            onDismiss = { showNoInternetDialog = false; onBack() },
             onRetry = {
                 if (NetworkUtils.isInternetAvailable(context)) {
                     showNoInternetDialog = false
@@ -177,16 +192,12 @@ fun GameScreen(
         )
     }
 
-    // ✅ Dialog "Jeu terminé"
     if (showGameCompletedDialog) {
         AlertDialog(
-            onDismissRequest = {
-                showGameCompletedDialog = false
-                onBack()
-            },
+            onDismissRequest = { showGameCompletedDialog = false; onBack() },
             title = {
                 Text(
-                    text = "🏆 Félicitations!",
+                    text = "🏆 Congratulations!",
                     fontWeight = FontWeight.Bold,
                     fontSize = 22.sp,
                     textAlign = TextAlign.Center,
@@ -195,7 +206,7 @@ fun GameScreen(
             },
             text = {
                 Text(
-                    text = "Vous avez complété tous les niveaux!\n\nAttendez les prochains niveaux dans la mise à jour suivante 🚀",
+                    text = "You completed all levels!\n\nNew levels are coming in the next update 🚀",
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                     color = Color(0xFF64748B),
@@ -205,24 +216,12 @@ fun GameScreen(
             },
             confirmButton = {
                 Button(
-                    onClick = {
-                        showGameCompletedDialog = false
-                        onBack()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
+                    onClick = { showGameCompletedDialog = false; onBack() },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black,
-                        contentColor = Color.White
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White)
                 ) {
-                    Text(
-                        "Retour à l'accueil",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    Text("Back to Home", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 }
             },
             modifier = Modifier.padding(16.dp),
@@ -231,6 +230,7 @@ fun GameScreen(
         )
     }
 
+    // ── Main UI ───────────────────────────────────────────────────────────────
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = Color.White,
@@ -252,111 +252,139 @@ fun GameScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = "Retour",
-                                tint = Color.Black,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black, modifier = Modifier.size(24.dp))
                         }
                     },
                     actions = {
                         IconButton(onClick = { showTutorial = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Aide",
-                                tint = Color.Black,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            Icon(Icons.Default.Info, contentDescription = "Help", tint = Color.Black, modifier = Modifier.size(24.dp))
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.White
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
                 )
             },
-            // Banner placée dans bottomBar pour qu'elle ne chevauche jamais le contenu du jeu
             bottomBar = {
                 Column {
                     Spacer(modifier = Modifier.height(4.dp))
-                    BannerAdView(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                    )
+                    BannerAdView(modifier = Modifier.fillMaxWidth().navigationBarsPadding())
                 }
             }
         ) { padding ->
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
+                    .background(Color.White)
             ) {
-                when {
-                    isTransitioning -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
-                            Spacer(Modifier.height(32.dp))
-                            Text(
-                                "Chargement du prochain niveau...",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
+                // ── Lives row (tappable) ──────────────────────────────────────
+                if (isFullyLoaded) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) { showLivesDialog = true }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LivesComponent(lives = lives)
+                    }
+                }
+
+                // ── Game content ──────────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset(x = shakeOffset.value.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        isTransitioning -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
+                                Spacer(Modifier.height(32.dp))
+                                Text("Loading next level...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            }
+                        }
+                        loadError != null -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                                Text("❌", fontSize = 48.sp)
+                                Spacer(Modifier.height(16.dp))
+                                Text(loadError!!, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Color.Black, textAlign = TextAlign.Center)
+                            }
+                        }
+                        isLoadingLevels -> {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
+                                Spacer(Modifier.height(32.dp))
+                                Text("Loading level...", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            }
+                        }
+                        isFullyLoaded -> {
+                            PuzzleGame(
+                                level = currentLevel!!,
+                                boardState = boardState,
+                                onCellToggle = { r, c ->
+                                    // State cycle: 0→1→2→0. Track when a bomb (2) is about to be placed.
+                                    val cur = boardState.getOrNull(r)?.getOrNull(c) ?: 0
+                                    if (cur == 1) lastPlacedBombCell = r to c
+                                    viewModel.toggleCell(r, c)
+                                }
                             )
                         }
-                    }
-
-                    loadError != null -> {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(24.dp)
-                        ) {
-                            Text(
-                                text = "❌",
-                                fontSize = 48.sp
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Text(
-                                text = loadError!!,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Black,
-                                textAlign = TextAlign.Center
-                            )
-                        }
-                    }
-
-                    isLoadingLevels -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Color.Black, strokeWidth = 8.dp)
-                            Spacer(Modifier.height(32.dp))
-                            Text(
-                                "Chargement du niveau...",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                        }
-                    }
-
-                    isFullyLoaded -> {
-                        PuzzleGame(
-                            level = currentLevel!!,
-                            boardState = boardState,
-                            onCellToggle = { r, c -> viewModel.toggleCell(r, c) }
-                        )
                     }
                 }
             }
         }
 
+        // ── Tutorial overlay ──────────────────────────────────────────────────
         if (showTutorial) {
             TutorialOverlay(onSkip = {
                 TutorialPreferences.setTutorialShown(context)
                 showTutorial = false
             })
+        }
+
+        // ── Broken heart (violation) ──────────────────────────────────────────
+        if (showBrokenHeart) {
+            BrokenHeartOverlay(
+                message = violationMessage,
+                livesRemaining = lives,
+                onDismiss = { showBrokenHeart = false }
+            )
+        }
+
+        // ── Lives detail dialog ───────────────────────────────────────────────
+        if (showLivesDialog) {
+            LivesDetailDialog(
+                lives = lives,
+                timeToNextLife = timeToNextLife,
+                onWatchVideo = { showLivesDialog = false },
+                onDismiss = { showLivesDialog = false }
+            )
+        }
+
+        // ── Level success animation ───────────────────────────────────────────
+        if (showLevelSuccess) {
+            LevelSuccessAnimation(
+                levelNumber = currentIndex + 1,
+                onContinue = {
+                    showLevelSuccess = false
+                    isTransitioning = true
+                    goToNextLevel()   // No interstitial — banner only
+                }
+            )
+        }
+
+        // ── Game Over (no lives left) ─────────────────────────────────────────
+        if (lives == 0 && isFullyLoaded && !showLevelSuccess) {
+            GameOverScreen(
+                timeToNextLife = timeToNextLife,
+                onLifeEarned = { livesViewModel.addLife() },
+                onGoHome = onBack
+            )
         }
     }
 }

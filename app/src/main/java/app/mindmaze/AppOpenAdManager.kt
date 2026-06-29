@@ -7,9 +7,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
@@ -20,7 +19,7 @@ import java.util.Date
 
 class AppOpenAdManager(
     private val application: Application
-) : Application.ActivityLifecycleCallbacks, LifecycleObserver {
+) : Application.ActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
     private var appOpenAd: AppOpenAd? = null
     private var isLoadingAd = false
@@ -36,61 +35,44 @@ class AppOpenAdManager(
 
     companion object {
         private const val TAG = "AppOpenAdManager"
-
         private val USE_TEST_AD: Boolean = BuildConfig.USE_TEST_ADS
-
         private const val APP_OPEN_AD_UNIT_ID_REAL = "ca-app-pub-9651830078758870/8274845951"
-
         private const val APP_OPEN_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/9257395921"
-
         private const val AD_TIMEOUT_MS = 4 * 3600 * 1000L
         private const val MIN_AD_INTERVAL_MS = 30 * 60 * 1000L
-        // Délai minimum après lancement avant d'afficher une pub (évite les clics accidentels)
         private const val MIN_LAUNCH_DELAY_MS = 5000L
-        // Délai avant affichage quand l'app repasse au premier plan
         private const val FOREGROUND_DELAY_MS = 2000L
     }
 
     init {
         application.registerActivityLifecycleCallbacks(this)
-        val addObserver = ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-
-        val adUnitId = if (USE_TEST_AD) APP_OPEN_AD_UNIT_ID_TEST else APP_OPEN_AD_UNIT_ID_REAL
-
-        Log.d(TAG, "════════════════════════════════════")
-        Log.d(TAG, "🚀 AppOpenAdManager initialized - MindMaze")
-        Log.d(TAG, "📱 Mode: ${if (USE_TEST_AD) "TEST" else "PRODUCTION"}")
-        Log.d(TAG, "📱 Ad Unit ID: $adUnitId")
-        Log.d(TAG, "════════════════════════════════════")
-
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        Log.d(TAG, "🚀 AppOpenAdManager initialized — ${if (USE_TEST_AD) "TEST" else "PRODUCTION"}")
         loadAd()
     }
 
     fun loadAd() {
         if (isLoadingAd || isAdAvailable()) return
-
         isLoadingAd = true
+
         val adUnitId = if (USE_TEST_AD) APP_OPEN_AD_UNIT_ID_TEST else APP_OPEN_AD_UNIT_ID_REAL
-        val request = AdRequest.Builder().build()
+        Log.d(TAG, "📡 Loading App Open Ad — $adUnitId")
 
-        Log.d(TAG, "📡 LOADING APP OPEN AD")
-
+        // SDK 21+: no orientation parameter
         AppOpenAd.load(
             application,
             adUnitId,
-            request,
-            AppOpenAd.APP_OPEN_AD_ORIENTATION_PORTRAIT,
+            AdRequest.Builder().build(),
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {
-                    Log.d(TAG, "✅ APP OPEN AD LOADED!")
+                    Log.d(TAG, "✅ App Open Ad loaded")
                     appOpenAd = ad
                     isLoadingAd = false
                     loadTime = Date().time
-                    // Ne pas auto-afficher au chargement : l'affichage est géré par onAppForegrounded
                 }
 
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    Log.e(TAG, "❌ APP OPEN AD FAILED TO LOAD - Code: ${error.code}")
+                    Log.e(TAG, "❌ App Open Ad failed — ${error.code}: ${error.message}")
                     isLoadingAd = false
                 }
             }
@@ -99,18 +81,14 @@ class AppOpenAdManager(
 
     private fun isAdAvailable(): Boolean {
         val available = appOpenAd != null && (Date().time - loadTime) < AD_TIMEOUT_MS
-        if (!available && appOpenAd != null) {
-            appOpenAd = null
-        }
+        if (!available && appOpenAd != null) appOpenAd = null
         return available
     }
 
     private fun canShowAd(): Boolean {
-        // Ne pas afficher si l'app vient d'être lancée (évite les clics accidentels au démarrage)
         if (System.currentTimeMillis() - appLaunchTime < MIN_LAUNCH_DELAY_MS) return false
         if (lastAdShownTime == 0L) return true
-        val elapsed = System.currentTimeMillis() - lastAdShownTime
-        return elapsed >= MIN_AD_INTERVAL_MS
+        return System.currentTimeMillis() - lastAdShownTime >= MIN_AD_INTERVAL_MS
     }
 
     fun showAdIfAvailable(activity: Activity) {
@@ -119,11 +97,11 @@ class AppOpenAdManager(
             return
         }
 
-        Log.d(TAG, "🎬 SHOWING APP OPEN AD")
+        Log.d(TAG, "🎬 Showing App Open Ad")
 
         appOpenAd?.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
-                Log.d(TAG, "✅ Ad dismissed")
+                Log.d(TAG, "✅ App Open Ad dismissed")
                 appOpenAd = null
                 isShowingAd = false
                 lastAdShownTime = System.currentTimeMillis()
@@ -131,7 +109,7 @@ class AppOpenAdManager(
             }
 
             override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                Log.e(TAG, "❌ Ad failed to show: ${error.message}")
+                Log.e(TAG, "❌ App Open Ad show failed: ${error.message}")
                 appOpenAd = null
                 isShowingAd = false
                 loadAd()
@@ -145,14 +123,11 @@ class AppOpenAdManager(
         appOpenAd?.show(activity)
     }
 
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onAppForegrounded() {
-        Log.d(TAG, "📱 App to FOREGROUND")
-        // Délai de 2 secondes pour que l'utilisateur voie l'écran avant la pub
+    // DefaultLifecycleObserver — replaces deprecated @OnLifecycleEvent
+    override fun onStart(owner: LifecycleOwner) {
+        Log.d(TAG, "📱 App foregrounded")
         Handler(Looper.getMainLooper()).postDelayed({
-            currentActivity?.let {
-                if (!isShowingAd) showAdIfAvailable(it)
-            }
+            currentActivity?.let { if (!isShowingAd) showAdIfAvailable(it) }
         }, FOREGROUND_DELAY_MS)
     }
 

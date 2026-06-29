@@ -15,8 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import app.mindmaze.data.repositoryImp.PuzzleLevels
+import app.mindmaze.screens.HelpScreen
 import app.mindmaze.ui.theme.MindMazeTheme
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,6 +42,13 @@ class MainActivity : ComponentActivity() {
 
         checkAndClearCacheOnUpdate(this)
         preloadLevels(this)
+
+        // Register emulator/device as test device so test ads always deliver
+        MobileAds.setRequestConfiguration(
+            RequestConfiguration.Builder()
+                .setTestDeviceIds(listOf(com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR))
+                .build()
+        )
 
         MobileAds.initialize(this) {
             println("✅ AdMob initialized")
@@ -135,22 +144,20 @@ class MainActivity : ComponentActivity() {
 fun MindMazeApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
-    // Gestion du bouton retour système
-    BackHandler(enabled = currentScreen == Screen.Game) {
-        // Retour au menu depuis le jeu
+    BackHandler(enabled = currentScreen != Screen.Home) {
         currentScreen = Screen.Home
     }
 
     when (currentScreen) {
         Screen.Home -> HomeScreen(
-            onPlayClicked = {
-                currentScreen = Screen.Game
-            }
+            onPlayClicked = { currentScreen = Screen.Game },
+            onHelpClicked = { currentScreen = Screen.Help }
         )
         Screen.Game -> GameScreen(
-            onBack = {
-                currentScreen = Screen.Home
-            }
+            onBack = { currentScreen = Screen.Home }
+        )
+        Screen.Help -> HelpScreen(
+            onBack = { currentScreen = Screen.Home }
         )
     }
 }
@@ -158,4 +165,5 @@ fun MindMazeApp() {
 sealed class Screen {
     object Home : Screen()
     object Game : Screen()
+    object Help : Screen()
 }

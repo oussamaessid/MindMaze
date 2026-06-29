@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,7 +26,8 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 
 @Composable
 fun HomeScreen(
-    onPlayClicked: () -> Unit
+    onPlayClicked: () -> Unit,
+    onHelpClicked: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showNoInternetDialog by remember { mutableStateOf(false) }
@@ -63,7 +65,7 @@ fun HomeScreen(
             onDismissRequest = { showGameCompletedDialog = false },
             title = {
                 Text(
-                    text = "🏆 Félicitations!",
+                    text = "🏆 Congratulations!",
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp,
                     textAlign = TextAlign.Center,
@@ -72,7 +74,7 @@ fun HomeScreen(
             },
             text = {
                 Text(
-                    text = "Vous avez complété tous les niveaux disponibles!\n\nAttendez les prochains niveaux dans la mise à jour suivante 🚀",
+                    text = "You completed all available levels!\n\nNew levels are coming in the next update 🚀",
                     fontSize = 16.sp,
                     textAlign = TextAlign.Center,
                     color = Color(0xFF64748B),
@@ -93,7 +95,7 @@ fun HomeScreen(
                     )
                 ) {
                     Text(
-                        "D'accord",
+                        "OK",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
@@ -111,6 +113,21 @@ fun HomeScreen(
             .padding(bottom = 16.dp)
             .background(Color(0xFFFFFFFF))
     ) {
+        // Help button top-right
+        IconButton(
+            onClick = onHelpClicked,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 48.dp, end = 16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Aide / Règles",
+                tint = Color.Black,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -200,7 +217,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "START PLAYING",
+                        text = "PLAY",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )

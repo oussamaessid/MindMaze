@@ -35,6 +35,12 @@ class GameViewModel : ViewModel() {
         }
     }
 
+    fun clearCell(row: Int, col: Int) {
+        if (boardSize == 0) return
+        val index = row * boardSize + col
+        if (index in _flatBoard.indices) _flatBoard[index] = 0
+    }
+
     fun resetBoard() {
         _flatBoard.replaceAll { 0 }
         hasWon.value = false
