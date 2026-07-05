@@ -58,7 +58,7 @@ fun ExamplesSectionHorizontal() {
             item {
                 ExampleGrid(
                     initialQueens = listOf(0 to 0),
-                    initialXs = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5),
+                    initialXs = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5,1 to 0, 2 to 0, 3 to 0, 4 to 0 ),
                     colorMatrix = ExampleColorMatrix,
                     message = "Each row can only have one 💣",
                     modifier = Modifier.width(exampleWidth)
@@ -67,7 +67,7 @@ fun ExamplesSectionHorizontal() {
             item {
                 ExampleGrid(
                     initialQueens = listOf(0 to 0),
-                    initialXs = listOf(1 to 0, 2 to 0, 3 to 0, 4 to 0),
+                    initialXs = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5,1 to 0, 2 to 0, 3 to 0, 4 to 0),
                     colorMatrix = ExampleColorMatrix,
                     message = "Each column can also only have one 💣",
                     modifier = Modifier.width(exampleWidth)
@@ -75,7 +75,8 @@ fun ExamplesSectionHorizontal() {
             }
             item {
                 ExampleGrid(
-                    initialQueens = listOf(2 to 5, 3 to 2),
+                    initialQueens = listOf(2 to 5, 3 to 2, 0 to 0),
+                    initialXs = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5,1 to 0, 2 to 0, 3 to 0, 4 to 0),
                     colorMatrix = ExampleColorMatrix,
                     violatedCells = listOf(
                         2 to 2, 2 to 3, 2 to 4, 2 to 5,
@@ -89,7 +90,8 @@ fun ExamplesSectionHorizontal() {
             }
             item {
                 ExampleGrid(
-                    initialQueens = listOf(1 to 5, 2 to 4),
+                    initialQueens = listOf(1 to 5, 2 to 4, 0 to 0),
+                    initialXs = listOf(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5,1 to 0, 2 to 0, 3 to 0, 4 to 0),
                     colorMatrix = ExampleColorMatrix,
                     violatedQueens = setOf(1 to 5, 2 to 4),
                     violatedCells = setOf(1 to 5, 2 to 4),

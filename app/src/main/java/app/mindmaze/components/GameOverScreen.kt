@@ -1,6 +1,8 @@
 package app.mindmaze.components
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.widget.Toast
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
