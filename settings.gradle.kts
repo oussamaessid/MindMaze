@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MindMaze"
+rootProject.name = "Kaboom"
 include(":app")
  

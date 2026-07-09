@@ -108,7 +108,7 @@ fun TutorialOverlay(
                     modifier = Modifier.wrapContentHeight()
                 ) {
                     Text(
-                        text = "👋 Welcome to MindMaze!",
+                        text = "👋 Welcome to Kaboom!",
                         fontSize = titleSize,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black

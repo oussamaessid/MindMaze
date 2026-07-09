@@ -16,7 +16,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.screens.HelpScreen
-import app.mindmaze.ui.theme.MindMazeTheme
+import app.mindmaze.ui.theme.KaboomTheme
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import kotlinx.coroutines.CoroutineScope
@@ -58,12 +58,12 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            MindMazeTheme {
+            KaboomTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MindMazeApp()
+                    KaboomApp()
                 }
             }
         }
@@ -141,7 +141,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MindMazeApp() {
+fun KaboomApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
     BackHandler(enabled = currentScreen != Screen.Home) {

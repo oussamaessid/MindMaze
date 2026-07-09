@@ -14,7 +14,7 @@ private val AppColorScheme = lightColorScheme(
 )
 
 @Composable
-fun MindMazeTheme(
+fun KaboomTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(

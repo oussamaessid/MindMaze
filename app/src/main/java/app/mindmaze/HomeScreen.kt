@@ -147,7 +147,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 60.dp)
                 ) {
                     Text(
-                        text = "MindMaze",
+                        text = "Kaboom",
                         fontSize = 48.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black,
