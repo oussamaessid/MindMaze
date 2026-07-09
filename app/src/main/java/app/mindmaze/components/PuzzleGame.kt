@@ -184,7 +184,7 @@ fun PuzzleGame(
 
         val placed = queens.size
         Text(
-            text = "$placed / $boardSize Bomb",
+            text = "$placed / $boardSize 💣",
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = if (violatedCells.isNotEmpty()) Color.Red else Color.Black
