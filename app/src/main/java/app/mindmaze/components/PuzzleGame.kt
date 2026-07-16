@@ -52,7 +52,9 @@ fun PuzzleGame(
 
     val matrix = remember(level, boardSize) { PuzzleLevels.buildMatrix(level, boardSize) }
     val configuration = LocalConfiguration.current
-    val cellSize = ((configuration.screenWidthDp.dp - 32.dp) / boardSize).coerceAtMost(60.dp)
+    val cellSpacing = 4.dp
+    val totalSpacing = cellSpacing * (boardSize - 1)
+    val cellSize = ((configuration.screenWidthDp.dp - 32.dp - totalSpacing) / boardSize).coerceAtMost(60.dp)
 
     // Position des Bomb
     val queens = remember(boardState) {
@@ -105,11 +107,12 @@ fun PuzzleGame(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(cellSpacing),
         modifier = Modifier.fillMaxWidth()
     ) {
         // Grille
         repeat(boardSize) { row ->
-            Row {
+            Row(horizontalArrangement = Arrangement.spacedBy(cellSpacing)) {
                 repeat(boardSize) { col ->
                     val bgColor = colors[matrix[row][col]]
                     val state = boardState[row][col]
