@@ -361,7 +361,10 @@ fun GameScreen(
             LivesDetailDialog(
                 lives = lives,
                 timeToNextLife = timeToNextLife,
-                onWatchVideo = { showLivesDialog = false },
+                onWatchVideo = {
+                    livesViewModel.addLife()
+                    showLivesDialog = false
+                },
                 onDismiss = { showLivesDialog = false }
             )
         }
