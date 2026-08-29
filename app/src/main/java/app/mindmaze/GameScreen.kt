@@ -471,7 +471,7 @@ fun GameScreen(
                                     }
                                 },
                                 onXPlace = { r, c, isSwipe ->
-                                    viewModel.placeX(r, c)
+                                    viewModel.placeX(r, c, isSwipe)
                                     if (guideActive && guideStep == 0 && isSwipe && (r to c) in GuideLevel.swipeCells) {
                                         guideStep = 1
                                     }

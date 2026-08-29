@@ -46,14 +46,18 @@ class GameViewModel : ViewModel() {
     }
 
     /**
-     * Places an X (swipe/drag). Only affects empty cells, so a stroke re-crossing the same
-     * cell is a no-op and a placed bomb is never overwritten by an accidental swipe.
+     * Places an X (tap/swipe/drag). A swipe only affects empty cells, so a stroke
+     * re-crossing the same cell is a no-op and a placed bomb is never overwritten by an
+     * accidental swipe. A single tap on a cell that already holds an X clears it back to
+     * empty instead, giving the player a quick way to undo a mark.
      */
-    fun placeX(row: Int, col: Int) {
+    fun placeX(row: Int, col: Int, isSwipe: Boolean = false) {
         if (boardSize == 0) return
         val index = row * boardSize + col
-        if (index in _flatBoard.indices && _flatBoard[index] == 0) {
-            _flatBoard[index] = 1
+        if (index !in _flatBoard.indices) return
+        when {
+            _flatBoard[index] == 0 -> _flatBoard[index] = 1
+            _flatBoard[index] == 1 && !isSwipe -> _flatBoard[index] = 0
         }
     }
 
