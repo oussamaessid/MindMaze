@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -17,18 +18,24 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.mindmaze.audio.SoundManager
 import app.mindmaze.components.*
 import app.mindmaze.data.model.PuzzleLevel
+import app.mindmaze.data.repositoryImp.GuideLevel
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.lives.LivesViewModel
 import app.mindmaze.rules.RulesValidator
 import app.mindmaze.vm.GameViewModel
+import kotlinx.coroutines.delay
 
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,9 +46,19 @@ fun GameScreen(
     livesViewModel: LivesViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val soundManager = remember { SoundManager.get(context) }
+    val haptic = LocalHapticFeedback.current
 
     var levels by remember { mutableStateOf<List<PuzzleLevel>?>(null) }
-    var showTutorial by remember { mutableStateOf(!TutorialPreferences.isTutorialShown(context)) }
+    // The "?" button opens this static reference overlay on demand, any time.
+    var showTutorial by remember { mutableStateOf(false) }
+    // First-time-only interactive level 0. It uses the first puzzle's real rules, then
+    // resets the board before level 1 starts so guide marks never leak into normal play.
+    var guideActive by remember { mutableStateOf(!TutorialPreferences.isTutorialShown(context)) }
+    var showWelcome by remember { mutableStateOf(guideActive) }
+    // 0 = opening X swipe, 1..4 = the four BOOMS, 5 = complete.
+    var guideStep by remember { mutableStateOf(0) }
+    var guideFinishing by remember { mutableStateOf(false) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
     var isLoadingLevels by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
@@ -66,6 +83,9 @@ fun GameScreen(
 
     var prevBombCount by remember { mutableStateOf(-1) }
     var lastPlacedBombCell by remember { mutableStateOf<Pair<Int, Int>?>(null) }
+    var boomEvent by remember { mutableStateOf<CellEvent?>(null) }
+    var errorCellEvent by remember { mutableStateOf<CellEvent?>(null) }
+    var successCellEvent by remember { mutableStateOf<CellEvent?>(null) }
 
     val currentIndex by viewModel.currentLevelIndex
     val boardState by derivedStateOf { viewModel.boardState }
@@ -91,13 +111,17 @@ fun GameScreen(
                 return@LaunchedEffect
             }
             levels = loadedLevels
-            val lastSavedIndex = LevelPreferences.loadLastLevel(context).coerceIn(0, loadedLevels.lastIndex)
+            val lastSavedIndex = if (guideActive) 0 else {
+                LevelPreferences.loadLastLevel(context).coerceIn(0, loadedLevels.lastIndex)
+            }
             viewModel.currentLevelIndex.value = lastSavedIndex
-            val currentLevel = loadedLevels[lastSavedIndex]
-            val size = PuzzleLevels.getBoardSize(currentLevel)
-            viewModel.initBoard(size, currentLevel)
-            val savedBoard = LevelPreferences.loadBoardState(context, lastSavedIndex, size)
-            if (savedBoard != null && savedBoard.size == size) viewModel.restoreBoardState(savedBoard)
+            val initialLevel = if (guideActive) GuideLevel.level else loadedLevels[lastSavedIndex]
+            val size = PuzzleLevels.getBoardSize(initialLevel)
+            viewModel.initBoard(size, initialLevel)
+            if (!guideActive) {
+                val savedBoard = LevelPreferences.loadBoardState(context, lastSavedIndex, size)
+                if (savedBoard != null && savedBoard.size == size) viewModel.restoreBoardState(savedBoard)
+            }
             isLoadingLevels = false
         } catch (e: Exception) {
             loadError = "Loading error: ${e.message}"
@@ -106,22 +130,42 @@ fun GameScreen(
         }
     }
 
-    val currentLevel = levels?.getOrNull(currentIndex)
+    val currentLevel = if (guideActive) GuideLevel.level else levels?.getOrNull(currentIndex)
     val isFullyLoaded =
         levels != null && currentLevel != null && viewModel.isBoardReady && boardState.isNotEmpty()
+
+    fun finishGuide() {
+        guideActive = false
+        showWelcome = false
+        guideFinishing = false
+        TutorialPreferences.setTutorialShown(context)
+        levels?.firstOrNull()?.let { firstLevel ->
+            viewModel.currentLevelIndex.value = 0
+            viewModel.initBoard(PuzzleLevels.getBoardSize(firstLevel), firstLevel)
+        }
+        prevBombCount = -1
+        lastPlacedBombCell = null
+    }
+
+    LaunchedEffect(guideFinishing) {
+        if (guideFinishing) {
+            delay(900)
+            finishGuide()
+        }
+    }
 
     LaunchedEffect(currentIndex) {
         levels?.let { if (currentIndex in it.indices) LevelPreferences.saveLastLevel(context, currentIndex) }
     }
     LaunchedEffect(boardState) {
-        if (isFullyLoaded && !hasWon && !isTransitioning) {
+        if (isFullyLoaded && !hasWon && !isTransitioning && !guideActive) {
             LevelPreferences.saveBoardState(context, currentIndex, boardState)
         }
     }
 
     // ── Auto-victory detection ─────────────────────────────────────────────────
     LaunchedEffect(boardState, currentLevel) {
-        if (isFullyLoaded && !hasWon && !isTransitioning && !showLevelSuccess) {
+        if (isFullyLoaded && !hasWon && !isTransitioning && !showLevelSuccess && !guideActive) {
             val size = boardState.size
             val matrix = PuzzleLevels.buildMatrix(currentLevel!!, size)
             if (checkVictory(boardState, size, matrix)) {
@@ -136,22 +180,34 @@ fun GameScreen(
     LaunchedEffect(boardState) {
         if (!isFullyLoaded || isTransitioning || hasWon || showLevelSuccess) return@LaunchedEffect
         val bombCount = boardState.sumOf { row -> row.count { it == 2 } }
+        if (guideActive) {
+            prevBombCount = bombCount
+            return@LaunchedEffect
+        }
         if (prevBombCount == -1) { prevBombCount = bombCount; return@LaunchedEffect }
         if (bombCount > prevBombCount) {
             val size = boardState.size
             val matrix = PuzzleLevels.buildMatrix(currentLevel!!, size)
             val result = RulesValidator.validate(boardState, matrix, size)
+            val bombCell = lastPlacedBombCell
             if (result.hasViolation) {
-                // Remove the offending bomb immediately so the board is clean before the animation
-                lastPlacedBombCell?.let { (r, c) ->
+                // Turn the offending bomb into an X (tried-and-wrong marker) instead of
+                // clearing it, right as the red error flash plays over it.
+                bombCell?.let { (r, c) ->
                     if (boardState.getOrNull(r)?.getOrNull(c) == 2) {
-                        viewModel.clearCell(r, c)
+                        viewModel.markInvalidBombAsErrorX(r, c)
                     }
+                    errorCellEvent = CellEvent(r, c, System.nanoTime())
                 }
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                soundManager.playError()
                 livesViewModel.loseLife()
                 shakeKey++
                 violationMessage = result.message
                 showBrokenHeart = true
+            } else {
+                bombCell?.let { (r, c) -> successCellEvent = CellEvent(r, c, System.nanoTime()) }
+                soundManager.playSuccess()
             }
         }
         prevBombCount = bombCount
@@ -239,7 +295,7 @@ fun GameScreen(
                     title = {
                         if (isFullyLoaded && !isTransitioning) {
                             Text(
-                                text = "Level ${currentIndex + 1}",
+                                text = if (guideActive) "Guide • Level 0" else "Level ${currentIndex + 1}",
                                 fontSize = 22.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black,
@@ -293,6 +349,59 @@ fun GameScreen(
                     }
                 }
 
+                // ── First-launch guide banner ───────────────────────────────────
+                // Guide sequence: complete a dedicated four-BOOM puzzle, including X swipe.
+                if (guideActive && !showWelcome && isFullyLoaded) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .background(Color(0xFF111827), RoundedCornerShape(14.dp))
+                            .padding(14.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Image(
+                                painter = painterResource(R.drawable.fire_boom_character),
+                                contentDescription = "Fire guide",
+                                modifier = Modifier.size(58.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = when (guideStep) {
+                                    0 -> "Start here: swipe across the three glowing cells to place several ✕ marks at once."
+                                    1 -> "All BOOM positions are now indicated. Double-tap or press and hold any glowing BOOM cell."
+                                    2 -> "Great! Three BOOMS remain. Choose another indicated cell."
+                                    3 -> "Good! Two BOOMS remain. Keep using double-tap or press and hold."
+                                    4 -> "One final BOOM remains. Place it to complete Level 0."
+                                    else -> "Excellent! Level 0 is complete. Level 1 is starting…"
+                                },
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                lineHeight = 19.sp
+                            )
+                            if (guideStep == 0) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Image(
+                                        painter = painterResource(R.drawable.point),
+                                        contentDescription = "Swipe finger",
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                    Spacer(Modifier.width(5.dp))
+                                    Text("SWIPE  →", color = Color(0xFFFFB74D), fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.width(5.dp))
+                                    repeat(3) {
+                                        Text("✕", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                                        Spacer(Modifier.width(3.dp))
+                                    }
+                                }
+                            }
+                            }
+                        }
+                    }
+                }
+
                 // ── Game content ──────────────────────────────────────────────
                 Box(
                     modifier = Modifier
@@ -326,17 +435,121 @@ fun GameScreen(
                             PuzzleGame(
                                 level = currentLevel!!,
                                 boardState = boardState,
-                                onCellToggle = { r, c ->
-                                    // State cycle: 0→1→2→0. Track when a bomb (2) is about to be placed.
-                                    val cur = boardState.getOrNull(r)?.getOrNull(c) ?: 0
-                                    if (cur == 1) lastPlacedBombCell = r to c
-                                    viewModel.toggleCell(r, c)
-                                }
+                                onBoomLongPress = { r, c ->
+                                    val alreadyPlacedGuideBoom = guideActive &&
+                                        boardState.getOrNull(r)?.getOrNull(c) == 2
+                                    val placed = if (alreadyPlacedGuideBoom) false else viewModel.placeBomb(r, c)
+                                    if (placed) {
+                                        lastPlacedBombCell = r to c
+                                        boomEvent = CellEvent(r, c, System.nanoTime())
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        soundManager.playBoom()
+                                        if (guideActive) {
+                                            val solutionIndex = if (guideStep in 1..4) guideStep - 1 else -1
+                                            val isSolutionCell = (r to c) in GuideLevel.solution
+                                            if (solutionIndex >= 0 && isSolutionCell) {
+                                                if (guideStep == 1) viewModel.autoMarkAroundBomb(r, c)
+                                                successCellEvent = CellEvent(r, c, System.nanoTime())
+                                                soundManager.playSuccess()
+                                                val guideSolved = GuideLevel.solution.all { (sr, sc) ->
+                                                    viewModel.boardState.getOrNull(sr)?.getOrNull(sc) == 2
+                                                }
+                                                if (guideSolved) {
+                                                    guideStep = 5
+                                                    guideFinishing = true
+                                                } else {
+                                                    guideStep++
+                                                }
+                                            } else {
+                                                viewModel.markInvalidBombAsErrorX(r, c)
+                                                errorCellEvent = CellEvent(r, c, System.nanoTime())
+                                                soundManager.playError()
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                shakeKey++
+                                            }
+                                        }
+                                    }
+                                },
+                                onXPlace = { r, c, isSwipe ->
+                                    viewModel.placeX(r, c)
+                                    if (guideActive && guideStep == 0 && isSwipe && (r to c) in GuideLevel.swipeCells) {
+                                        guideStep = 1
+                                    }
+                                },
+                                boomEvent = boomEvent,
+                                errorEvent = errorCellEvent,
+                                successEvent = successCellEvent,
+                                highlightCells = if (guideActive && !showWelcome && !guideFinishing) {
+                                    if (guideStep == 0) GuideLevel.swipeCells
+                                    else GuideLevel.solution.filterTo(mutableSetOf()) { (sr, sc) ->
+                                        boardState.getOrNull(sr)?.getOrNull(sc) != 2
+                                    }
+                                } else emptySet(),
+                                guidePointerCell = if (guideActive && !showWelcome && !guideFinishing) {
+                                    if (guideStep == 0) GuideLevel.swipeCells.first()
+                                    else GuideLevel.solution.firstOrNull { (sr, sc) ->
+                                        boardState.getOrNull(sr)?.getOrNull(sc) != 2
+                                    }
+                                } else null,
+                                maxCellSize = if (guideActive) 84.dp else 72.dp
                             )
                         }
                     }
                 }
             }
+        }
+
+        // ── First-install welcome screen ──────────────────────────────────────
+        if (showWelcome && guideActive) {
+            AlertDialog(
+                onDismissRequest = { },
+                icon = {
+                    Image(
+                        painter = painterResource(R.drawable.fire_boom_character),
+                        contentDescription = "KABOOM fire character",
+                        modifier = Modifier.size(128.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Welcome to KABOOM!",
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
+                    )
+                },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Find one BOOM in every row, column, and colored zone. BOOMS can never touch — not even diagonally.",
+                            fontSize = 16.sp,
+                            lineHeight = 23.sp,
+                            textAlign = TextAlign.Center,
+                            color = Color(0xFF475569)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = "A short Level 0 guide will show you each move.",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                            color = Color(0xFFFF6B35)
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showWelcome = false },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B35))
+                    ) {
+                        Text("START THE GUIDE", fontWeight = FontWeight.ExtraBold)
+                    }
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = Color.White
+            )
         }
 
         // ── Tutorial overlay ──────────────────────────────────────────────────

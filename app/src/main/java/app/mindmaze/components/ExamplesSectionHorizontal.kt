@@ -24,7 +24,7 @@ fun ExamplesSectionHorizontal() {
     val exampleWidth = screenWidth * 0.85f
 
     val listState = rememberLazyListState()
-    val totalItems = 4
+    val totalItems = 5
 
     val currentPage by remember {
         derivedStateOf {
@@ -97,6 +97,19 @@ fun ExamplesSectionHorizontal() {
                     violatedCells = setOf(1 to 5, 2 to 4),
                     violatedDiagonal = setOf(1 to 5, 2 to 4),
                     message = "Two 💣 cannot touch each other, not even diagonally",
+                    modifier = Modifier.width(exampleWidth)
+                )
+            }
+            item {
+                ExampleGrid(
+                    initialQueens = listOf(2 to 2),
+                    initialXs = (
+                        (0 until 6).filter { it != 2 }.map { 2 to it } +
+                            (0 until 5).filter { it != 2 }.map { it to 2 } +
+                            listOf(1 to 1, 1 to 3, 3 to 1, 3 to 3)
+                        ),
+                    colorMatrix = ExampleColorMatrix,
+                    message = "Placing 💣 auto-marks X on its row, column, and touching cells",
                     modifier = Modifier.width(exampleWidth)
                 )
             }

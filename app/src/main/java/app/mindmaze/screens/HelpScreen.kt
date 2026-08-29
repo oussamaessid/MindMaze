@@ -68,11 +68,20 @@ fun HelpScreen(onBack: () -> Unit) {
             }
 
             HelpSection(icon = "👆", title = "Controls", color = Color(0xFF10B981)) {
-                TapRuleRow(tap = "1 tap", result = "Mark a forbidden cell  ✕")
+                TapRuleRow(tap = "Tap", result = "Mark a forbidden cell  ✕")
                 Spacer(Modifier.height(6.dp))
-                TapRuleRow(tap = "2 taps", result = "Place a bomb  💣")
+                TapRuleRow(tap = "Swipe", result = "Mark ✕ across every cell you cross")
                 Spacer(Modifier.height(6.dp))
-                TapRuleRow(tap = "3 taps", result = "Clear the cell")
+                TapRuleRow(tap = "Double tap", result = "Place a bomb  💣")
+                Spacer(Modifier.height(6.dp))
+                TapRuleRow(tap = "Press & hold", result = "Place a bomb  💣")
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Placing 💣 automatically marks ✕ on its row, column, and touching cells for you.",
+                    fontSize = 13.sp,
+                    color = Color(0xFF6B7280),
+                    lineHeight = 18.sp
+                )
             }
 
             HelpSection(icon = "📋", title = "Game Rules", color = Color(0xFFF59E0B)) {
@@ -96,6 +105,7 @@ fun HelpScreen(onBack: () -> Unit) {
                 BulletPoint("A broken heart animation plays 💔")
                 BulletPoint("The violated rule is displayed")
                 BulletPoint("You lose 1 life")
+                BulletPoint("The bomb turns into a red ✕, marking the mistake")
                 BulletPoint("You stay on the same level")
             }
 

@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import app.mindmaze.audio.SoundManager
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.screens.HelpScreen
 import app.mindmaze.ui.theme.KaboomTheme
@@ -137,6 +138,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         appOpenAdManager?.cleanup()
+        SoundManager.release()
     }
 }
 

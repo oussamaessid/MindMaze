@@ -1,6 +1,7 @@
 package app.mindmaze.components
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,7 +12,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,6 +61,18 @@ fun LevelSuccessAnimation(
         animationSpec = infiniteRepeatable(tween(650, delayMillis = 400), RepeatMode.Reverse),
         label = "s3"
     )
+    val fireJump by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = -20f,
+        animationSpec = infiniteRepeatable(tween(520, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "fire_jump"
+    )
+    val fireTilt by infiniteTransition.animateFloat(
+        initialValue = -5f,
+        targetValue = 5f,
+        animationSpec = infiniteRepeatable(tween(420), RepeatMode.Reverse),
+        label = "fire_tilt"
+    )
 
     var continued by remember { mutableStateOf(false) }
     LaunchedEffect(progress) {
@@ -76,10 +91,22 @@ fun LevelSuccessAnimation(
             .background(Color.Black.copy(alpha = 0.88f)),
         contentAlignment = Alignment.Center
     ) {
+        Image(
+            painter = painterResource(R.drawable.fire_boom_celebrate),
+            contentDescription = "Fire character celebrating",
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 18.dp)
+                .size(180.dp)
+                .graphicsLayer {
+                    translationY = fireJump
+                    rotationZ = fireTilt
+                }
+        )
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier.padding(horizontal = 32.dp).padding(top = 120.dp)
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),

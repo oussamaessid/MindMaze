@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.widget.Toast
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,7 +17,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -149,6 +152,12 @@ fun GameOverScreen(
         ),
         label = "heart_scale"
     )
+    val sadSway by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "sad_sway"
+    )
 
     Box(
         modifier = Modifier
@@ -163,6 +172,20 @@ fun GameOverScreen(
                 .fillMaxWidth()
                 .padding(32.dp)
         ) {
+            Image(
+                painter = painterResource(app.mindmaze.R.drawable.fire_boom_sad),
+                contentDescription = "Sad fire character",
+                modifier = Modifier
+                    .size(160.dp)
+                    .graphicsLayer {
+                        rotationZ = sadSway
+                        scaleX = heartScale * 0.92f
+                        scaleY = heartScale * 0.92f
+                    }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = "💀 Game Over",
                 fontSize = 34.sp,

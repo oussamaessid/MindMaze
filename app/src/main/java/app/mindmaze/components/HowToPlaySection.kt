@@ -39,12 +39,17 @@ fun HowToPlaySection() {
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                "2. Tap once to place X and tap twice for 💣. Use X to mark where 💣 cannot be placed.",
+                "2. Tap a cell to mark X, or swipe across cells to mark several at once. X shows where 💣 cannot go.",
                 fontSize = 16.sp,
                 modifier = Modifier.padding(bottom = 4.dp)
             )
             Text(
-                "3. Two 💣 cannot touch each other, not even diagonally.",
+                "3. Double-tap or press and hold a cell to place 💣. Its row, column, and touching cells get marked X automatically.",
+                fontSize = 16.sp,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                "4. Two 💣 cannot touch each other, not even diagonally.",
                 fontSize = 16.sp
             )
         }
