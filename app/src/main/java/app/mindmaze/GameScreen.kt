@@ -37,6 +37,56 @@ import app.mindmaze.rules.RulesValidator
 import app.mindmaze.vm.GameViewModel
 import kotlinx.coroutines.delay
 
+@Composable
+private fun GameRuleCards(modifier: Modifier = Modifier) {
+    val rules = listOf(
+        "ONE PER\nCOLOR",
+        "ROW +\nCOLUMN",
+        "NEVER\nTOUCH"
+    )
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        rules.forEach { label ->
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(76.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9E3F4)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 4.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.fire_boom_character),
+                        contentDescription = null,
+                        modifier = Modifier.size(30.dp)
+                    )
+                    Text(
+                        text = label,
+                        color = Color(0xFF2778C9),
+                        fontSize = 11.sp,
+                        lineHeight = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
 @SuppressLint("UnrememberedMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -347,6 +397,11 @@ fun GameScreen(
                     ) {
                         LivesComponent(lives = lives)
                     }
+                }
+
+                // Keep the three core rules visible during normal gameplay.
+                if (isFullyLoaded && !guideActive) {
+                    GameRuleCards()
                 }
 
                 // ── First-launch guide banner ───────────────────────────────────
