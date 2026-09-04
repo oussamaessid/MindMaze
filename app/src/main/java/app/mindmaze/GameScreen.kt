@@ -40,47 +40,82 @@ import kotlinx.coroutines.delay
 @Composable
 private fun GameRuleCards(modifier: Modifier = Modifier) {
     val rules = listOf(
-        "ONE PER\nCOLOR",
-        "ROW +\nCOLUMN",
-        "NEVER\nTOUCH"
+        Triple(0, "1 BOOM", "PER COLOR"),
+        Triple(1, "1 BOOM", "PER ROW & COLUMN"),
+        Triple(2, "BOOMS", "CAN'T TOUCH")
     )
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        rules.forEach { label ->
+        rules.forEach { (ruleType, title, subtitle) ->
             Card(
                 modifier = Modifier
                     .weight(1f)
-                    .height(76.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD9E3F4)),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    .height(92.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE6EEF9)),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
             ) {
-                Column(
+                Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 4.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.fire_boom_character),
-                        contentDescription = null,
-                        modifier = Modifier.size(30.dp)
-                    )
-                    Text(
-                        text = label,
-                        color = Color(0xFF2778C9),
-                        fontSize = 11.sp,
-                        lineHeight = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    MiniBoomRuleGrid(ruleType = ruleType, modifier = Modifier.size(58.dp))
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                        Text(title, color = Color(0xFF2384E8), fontSize = 11.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black)
+                        Text(subtitle, color = Color(0xFF2384E8), fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.ExtraBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniBoomRuleGrid(ruleType: Int, modifier: Modifier = Modifier) {
+    val bombCell = when (ruleType) {
+        0 -> 4
+        1 -> 1
+        else -> 4
+    }
+    val xCells = when (ruleType) {
+        0 -> setOf(0, 1, 2, 3, 6)
+        1 -> setOf(0, 2, 4, 7)
+        else -> setOf(0, 1, 2, 3, 5, 6, 7, 8)
+    }
+
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        repeat(3) { row ->
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                repeat(3) { column ->
+                    val index = row * 3 + column
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .background(
+                                if (index == bombCell) Color(0xFFFFE3D5) else Color(0xFFDCEEFF),
+                                RoundedCornerShape(4.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            index == bombCell -> Image(
+                                painter = painterResource(R.drawable.boom_happy),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(.88f)
+                            )
+                            index in xCells -> Text("×", color = Color(0xFF2384E8), fontSize = 16.sp, lineHeight = 16.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
                 }
             }
         }
@@ -118,7 +153,7 @@ fun GameScreen(
     val lives by livesViewModel.lives
     val timeToNextLife by livesViewModel.timeToNextLife
     var showLevelSuccess by remember { mutableStateOf(false) }
-    var showBrokenHeart by remember { mutableStateOf(false) }
+    var showBoomExplosion by remember { mutableStateOf(false) }
     var violationMessage by remember { mutableStateOf("") }
     var showLivesDialog by remember { mutableStateOf(false) }
 
@@ -254,7 +289,7 @@ fun GameScreen(
                 livesViewModel.loseLife()
                 shakeKey++
                 violationMessage = result.message
-                showBrokenHeart = true
+                showBoomExplosion = true
             } else {
                 bombCell?.let { (r, c) -> successCellEvent = CellEvent(r, c, System.nanoTime()) }
                 soundManager.playSuccess()
@@ -416,8 +451,8 @@ fun GameScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Image(
-                                painter = painterResource(R.drawable.fire_boom_character),
-                                contentDescription = "Fire guide",
+                                painter = painterResource(R.drawable.boom_happy),
+                                contentDescription = "BOOM guide",
                                 modifier = Modifier.size(58.dp)
                             )
                             Spacer(Modifier.width(10.dp))
@@ -503,7 +538,7 @@ fun GameScreen(
                                             val solutionIndex = if (guideStep in 1..4) guideStep - 1 else -1
                                             val isSolutionCell = (r to c) in GuideLevel.solution
                                             if (solutionIndex >= 0 && isSolutionCell) {
-                                                if (guideStep == 1) viewModel.autoMarkAroundBomb(r, c)
+                                                viewModel.autoMarkAroundBomb(r, c)
                                                 successCellEvent = CellEvent(r, c, System.nanoTime())
                                                 soundManager.playSuccess()
                                                 val guideSolved = GuideLevel.solution.all { (sr, sc) ->
@@ -560,14 +595,14 @@ fun GameScreen(
                 onDismissRequest = { },
                 icon = {
                     Image(
-                        painter = painterResource(R.drawable.fire_boom_character),
-                        contentDescription = "KABOOM fire character",
+                        painter = painterResource(R.drawable.boom_happy),
+                        contentDescription = "BOOMDUKU bomb character",
                         modifier = Modifier.size(128.dp)
                     )
                 },
                 title = {
                     Text(
-                        text = "Welcome to KABOOM!",
+                        text = "Welcome to BOOMDUKU!",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center
@@ -615,12 +650,12 @@ fun GameScreen(
             })
         }
 
-        // ── Broken heart (violation) ──────────────────────────────────────────
-        if (showBrokenHeart) {
-            BrokenHeartOverlay(
+        // ── BOOM explosion (violation) ──────────────────────────────────────────
+        if (showBoomExplosion) {
+            BoomExplosionOverlay(
                 message = violationMessage,
                 livesRemaining = lives,
-                onDismiss = { showBrokenHeart = false }
+                onDismiss = { showBoomExplosion = false }
             )
         }
 

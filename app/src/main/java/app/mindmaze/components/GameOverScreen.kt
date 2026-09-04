@@ -173,10 +173,10 @@ fun GameOverScreen(
                 .padding(32.dp)
         ) {
             Image(
-                painter = painterResource(app.mindmaze.R.drawable.fire_boom_sad),
-                contentDescription = "Sad fire character",
+                painter = painterResource(app.mindmaze.R.drawable.boomduku_defeat_mascot),
+                contentDescription = "BOOMDUKU mascot sad and frustrated after losing",
                 modifier = Modifier
-                    .size(160.dp)
+                    .size(210.dp)
                     .graphicsLayer {
                         rotationZ = sadSway
                         scaleX = heartScale * 0.92f
@@ -187,7 +187,7 @@ fun GameOverScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "💀 Game Over",
+                text = "OH NO!",
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -197,7 +197,7 @@ fun GameOverScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "You have no lives left",
+                text = "The bomb is sad… but your comeback can be explosive!",
                 fontSize = 16.sp,
                 color = Color(0xFF94A3B8),
                 textAlign = TextAlign.Center
@@ -205,13 +205,7 @@ fun GameOverScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            Text(
-                text = "💔",
-                fontSize = 100.sp,
-                modifier = Modifier.scale(heartScale)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             if (timeToNextLife > 0) {
                 Text(

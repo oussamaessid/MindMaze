@@ -35,7 +35,7 @@ class SoundManager private constructor(context: Context) {
             if (status == 0) loadedIds += sampleId
         }
 
-        listOf("boom", "error", "success").forEach { name ->
+        listOf("boom", "error", "success", "drum_hit").forEach { name ->
             val resId = appContext.resources.getIdentifier(name, "raw", appContext.packageName)
             if (resId != 0) {
                 soundIds[name] = soundPool.load(appContext, resId, 1)
@@ -54,6 +54,9 @@ class SoundManager private constructor(context: Context) {
     fun playError() = play("error", ToneGenerator.TONE_CDMA_PIP, 220)
 
     fun playSuccess() = play("success", ToneGenerator.TONE_PROP_BEEP2, 140)
+
+    /** Short, low-latency celebration hit. Falls back to a tone if the sample is unavailable. */
+    fun playDrumHit() = play("drum_hit", ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 180)
 
     private fun play(name: String, fallbackTone: Int, fallbackDurationMs: Int) {
         val id = soundIds[name]

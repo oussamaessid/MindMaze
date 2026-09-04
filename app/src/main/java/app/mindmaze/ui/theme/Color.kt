@@ -2,10 +2,11 @@ package app.mindmaze.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val Night = Color(0xFF090608)
+val NightSoft = Color(0xFF210B10)
+val Ember = Color(0xFFFF4B23)
+val Violet = Color(0xFFFF8A22)
+val Sky = Color(0xFFFFC14D)
+val Cloud = Color(0xFFF8F7FC)
+val Ink = Color(0xFF181421)
+val InkMuted = Color(0xFF706B7C)

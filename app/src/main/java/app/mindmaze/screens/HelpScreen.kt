@@ -14,12 +14,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.mindmaze.R
+import app.mindmaze.components.LivesComponent
 import app.mindmaze.lives.LivesManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,14 +101,14 @@ fun HelpScreen(onBack: () -> Unit) {
                     lineHeight = 20.sp
                 )
                 Spacer(Modifier.height(8.dp))
-                BulletPoint("A broken heart animation plays 💔")
+                BulletPoint("A BOOM explosion animation plays 💥")
                 BulletPoint("The violated rule is displayed")
                 BulletPoint("You lose 1 life")
                 BulletPoint("The bomb turns into a red ✕, marking the mistake")
                 BulletPoint("You stay on the same level")
             }
 
-            HelpSection(icon = "❤️", title = "Lives System", color = Color(0xFFEC4899)) {
+            HelpSection(icon = "💣", title = "Lives System", color = Color(0xFFEC4899)) {
                 Text(
                     text = "You have ${LivesManager.MAX_LIVES} lives maximum.",
                     fontSize = 15.sp,
@@ -122,22 +121,14 @@ fun HelpScreen(onBack: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(LivesManager.MAX_LIVES) { i ->
-                        val alive = i < 3
-                        Icon(
-                            painter = painterResource(if (alive) R.drawable.ic_heart else R.drawable.ic_heart1),
-                            contentDescription = null,
-                            tint = if (alive) Color(0xFFEF4444) else Color(0xFFD1D5DB),
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
+                    LivesComponent(lives = 3)
                     Spacer(Modifier.width(4.dp))
                     Text("= 3 lives", fontSize = 13.sp, color = Color(0xFF6B7280))
                 }
 
                 Spacer(Modifier.height(10.dp))
-                BulletPoint("Filled hearts ❤️ = available lives")
-                BulletPoint("Empty hearts 🤍 = lives recovering")
+                BulletPoint("Lit bombs 💣 = available lives")
+                BulletPoint("Unlit bombs = lives recovering")
             }
 
             HelpSection(icon = "⏱️", title = "Life Recovery", color = Color(0xFF8B5CF6)) {

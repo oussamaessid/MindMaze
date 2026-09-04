@@ -305,7 +305,7 @@ fun PuzzleGame(
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Tap / swipe → ❌  •  Double tap / long press → 💣",
+            text = "Tap / swipe → ✕  •  Double tap / long press → 💣",
             fontSize = 15.sp,
             color = Color.Gray,
             fontWeight = FontWeight.Medium
@@ -517,7 +517,7 @@ private fun GridCell(
                     .background(Color.Red.copy(alpha = 0.35f))
             )
             Image(
-                painter = painterResource(R.drawable.fire_boom_character),
+                painter = painterResource(R.drawable.boom_wrong),
                 contentDescription = "Sad BOOM",
                 contentScale = ContentScale.Fit,
                 colorFilter = ColorFilter.colorMatrix(
@@ -550,8 +550,8 @@ private fun GridCell(
             )
             2 -> Image(
                 painter = painterResource(
-                    if (showWinkFrame) R.drawable.fire_boom_wink
-                    else R.drawable.fire_boom_character
+                    if (showWinkFrame) R.drawable.boom_wink
+                    else R.drawable.boom_happy
                 ),
                 contentDescription = "BOOM",
                 contentScale = ContentScale.Fit,
