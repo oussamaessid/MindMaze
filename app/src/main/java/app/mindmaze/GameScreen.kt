@@ -596,13 +596,13 @@ fun GameScreen(
                 icon = {
                     Image(
                         painter = painterResource(R.drawable.boom_happy),
-                        contentDescription = "BOOMDUKU bomb character",
+                        contentDescription = "BOOMDOKU bomb character",
                         modifier = Modifier.size(128.dp)
                     )
                 },
                 title = {
                     Text(
-                        text = "Welcome to BOOMDUKU!",
+                        text = "Welcome to BOOMDOKU!",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center

@@ -36,7 +36,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Three-second BOOMDUKU victory celebration that always continues, even if audio fails. */
+/** Three-second BOOMDOKU victory celebration that always continues, even if audio fails. */
 @Composable
 fun LevelSuccessAnimation(levelNumber: Int, onContinue: () -> Unit) {
     val context = LocalContext.current
@@ -76,8 +76,8 @@ fun LevelSuccessAnimation(levelNumber: Int, onContinue: () -> Unit) {
             modifier = Modifier.padding(horizontal = 28.dp)
         ) {
             Image(
-                painter = painterResource(R.drawable.boomduku_victory_mascot),
-                contentDescription = "BOOMDUKU mascot celebrating the completed level",
+                painter = painterResource(R.drawable.boomdoko_victory_mascot),
+                contentDescription = "BOOMDOKU mascot celebrating the completed level",
                 modifier = Modifier
                     .size(310.dp)
                     .graphicsLayer {

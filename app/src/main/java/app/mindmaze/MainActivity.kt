@@ -17,7 +17,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import app.mindmaze.audio.SoundManager
 import app.mindmaze.data.repositoryImp.PuzzleLevels
 import app.mindmaze.screens.HelpScreen
-import app.mindmaze.ui.theme.BoomdukuTheme
+import app.mindmaze.ui.theme.BoomdokoTheme
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import kotlinx.coroutines.CoroutineScope
@@ -59,12 +59,12 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            BoomdukuTheme {
+            BoomdokoTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    BoomdukuApp()
+                    BoomdokoApp()
                 }
             }
         }
@@ -143,7 +143,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun BoomdukuApp() {
+fun BoomdokoApp() {
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Home) }
 
     BackHandler(enabled = currentScreen != Screen.Home) {

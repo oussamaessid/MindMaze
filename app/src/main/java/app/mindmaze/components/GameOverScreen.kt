@@ -173,8 +173,8 @@ fun GameOverScreen(
                 .padding(32.dp)
         ) {
             Image(
-                painter = painterResource(app.mindmaze.R.drawable.boomduku_defeat_mascot),
-                contentDescription = "BOOMDUKU mascot sad and frustrated after losing",
+                painter = painterResource(app.mindmaze.R.drawable.boomdoko_defeat_mascot),
+                contentDescription = "BOOMDOKU mascot sad and frustrated after losing",
                 modifier = Modifier
                     .size(210.dp)
                     .graphicsLayer {

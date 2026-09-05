@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "BOOMDUKU"
+rootProject.name = "BOOMDOKU"
 include(":app")
  

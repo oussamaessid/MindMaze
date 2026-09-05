@@ -16,7 +16,7 @@ private val AppColorScheme = lightColorScheme(
 )
 
 @Composable
-fun BoomdukuTheme(
+fun BoomdokoTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(

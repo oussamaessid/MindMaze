@@ -103,12 +103,12 @@ fun HomeScreen(onPlayClicked: () -> Unit, onHelpClicked: () -> Unit = {}) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.height(238.dp)) {
                     Box(Modifier.size(218.dp).scale(pulse).background(Brush.radialGradient(listOf(Ember.copy(.20f), Color.Transparent)), CircleShape))
                     Image(
-                        painter = painterResource(R.drawable.boomduku_app_icon),
-                        contentDescription = "BOOMDUKU fire bomb icon",
+                        painter = painterResource(R.drawable.boomdoko_app_icon),
+                        contentDescription = "BOOMDOKU fire bomb icon",
                         modifier = Modifier.size(204.dp).scale(pulse).clip(RoundedCornerShape(46.dp))
                     )
                 }
-                Text("BOOMDUKU", color = Ink, fontSize = 46.sp, lineHeight = 50.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Black)
+                Text("BOOMDOKU", color = Ink, fontSize = 46.sp, lineHeight = 50.sp, letterSpacing = 1.5.sp, fontWeight = FontWeight.Black)
                 Text("One bomb. One row. One brilliant move.", Modifier.padding(top = 6.dp), color = InkMuted, fontSize = 15.sp, fontWeight = FontWeight.Medium)
 
                 Surface(
